@@ -53,6 +53,24 @@ def validate_expression(expression: str) -> None:
     _parse_and_validate_expression(expression)
 
 
+def expression_names(expression: str) -> set[str]:
+    """Return non-function identifiers referenced by a validated expression."""
+    tree = _parse_and_validate_expression(expression)
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id not in _ALLOWED_FUNCS:
+            names.add(node.id)
+    return names
+
+
+def validate_expression_symbols(expression: str, allowed_names: set[str]) -> None:
+    """Reject identifiers that are neither solver variables nor model parameters."""
+    unknown = sorted(expression_names(expression) - set(allowed_names))
+    if unknown:
+        joined = ", ".join(unknown)
+        raise ValueError(f"Unknown expression symbol(s): {joined}")
+
+
 def evaluate_custom_expression(vj, expression: str, params: dict[str, float], polarity: str):
     """Evaluate a vectorized custom expression using Vj, absVj, u, s, and parameters."""
     tree = _parse_and_validate_expression(expression)
