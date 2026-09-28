@@ -27,12 +27,12 @@ export function FitActionButtons({
   let title: string | undefined;
 
   if (isFitting) {
-    label = language === "zh" ? "停止拟合" : "Stop fit";
+    label = "Stop fit";
     icon = "■";
     className = "primary fit-action-stop";
-    title = language === "zh" ? "中断当前拟合" : "Abort the running fit";
+    title = "Abort the running fit";
   } else if (completed) {
-    label = language === "zh" ? "重新拟合" : "Run again";
+    label = "Run again";
     icon = "▶";
     className = "primary";
     title = undefined;
@@ -40,7 +40,7 @@ export function FitActionButtons({
     label = t(language, "runFit");
     icon = "▶";
     className = hasSelectedTrace ? "primary" : "fit-action-unavailable";
-    title = !hasSelectedTrace ? (language === "zh" ? "请先导入数据" : "Import data before running a fit.") : undefined;
+    title = !hasSelectedTrace ? ("Import data before running a fit.") : undefined;
   }
 
   return (
@@ -67,12 +67,12 @@ export function FitReportButton({
   onMakeReport: () => void;
   reportAvailable: boolean;
 }) {
-  const label = language === "zh" ? "报告 →" : "Report →";
+  const label = "Report →";
   const hint = !result
-    ? (language === "zh" ? "完成拟合后可用" : "Available after fit")
+    ? ("Available after fit")
     : reportAvailable
-      ? (language === "zh" ? "查看报告" : "View report")
-      : (language === "zh" ? "报告暂不可用" : "Report unavailable");
+      ? ("View report")
+      : ("Report unavailable");
 
   return (
     <button
