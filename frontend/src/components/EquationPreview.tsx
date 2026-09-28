@@ -107,7 +107,7 @@ function residualLatex(branches: Term[]) {
 }
 function termMeaning(term: Term, language: Language) {
   const compSpec = termToComponentSpec(term);
-  return componentPhysicalRole(compSpec, language)[language === "zh" ? "zh" : "en"];
+  return componentPhysicalRole(compSpec, language)["en"];
 }
 function beginnerBranchMeaningLocal(term: Term, language: Language) {
   const compSpec = termToComponentSpec(term);
@@ -177,8 +177,8 @@ function FormulaCards({ series, branches, language }: { series: Term[]; branches
 }
 function SolverCard({ series, branches, language }: { series: Term[]; branches: Term[]; language: Language }) {
   return <div className="equation-card solver-card">
-    <h3>{language === "zh" ? "4. 拟合残差" : "4. Fit residual"}</h3>
-    <p className="equation-explain">{language === "zh" ? "对每个外加电压点，求解使残差为零的电流。" : "For each applied voltage, the solver finds the current that makes this residual zero."}</p>
+    <h3>{"4. Fit residual"}</h3>
+    <p className="equation-explain">{"For each applied voltage, the solver finds the current that makes this residual zero."}</p>
     <MathFormula latex={residualLatex(branches)} />
     <div className="chip-row"><strong>{t(language, "mainPath")}</strong>{series.map((s) => <span className="mini-chip" key={s.id}>{s.nick}</span>)}</div>
     <div className="chip-row"><strong>{t(language, "branches")}</strong>{branches.map((b) => <span className="mini-chip" key={b.id}>{b.nick}</span>)}</div>
@@ -187,8 +187,8 @@ function SolverCard({ series, branches, language }: { series: Term[]; branches: 
 function CurrentValuesCard({ model, result, language }: { model: ModelSpec; result?: FitResult | null; language: Language }) {
   const rows = parameterValueRows(model, result ?? null);
   return <div className="equation-card current-values-card">
-    <h3>{language === "zh" ? "当前参数值" : "Current parameter values"}</h3>
-    <p className="equation-explain">{language === "zh" ? "这些数值会代入上面的公式；运行拟合后这里显示拟合值，拟合前显示初始值。" : "These values plug into the formulas above. Before fitting they are initial values; after fitting they are fitted values."}</p>
+    <h3>{"Current parameter values"}</h3>
+    <p className="equation-explain">{"These values plug into the formulas above. Before fitting they are initial values; after fitting they are fitted values."}</p>
     <div className="parameter-chip-grid">
       {rows.map((row) => <span className="parameter-chip" key={row.key}>
         <strong>{row.label}</strong>
@@ -199,11 +199,11 @@ function CurrentValuesCard({ model, result, language }: { model: ModelSpec; resu
 }
 function ComponentRows({ terms, language }: { terms: Term[]; language: Language }) {
   return <div className="equation-card component-card">
-    <h3>{language === "zh" ? "元件含义" : "Component meaning"}</h3>
+    <h3>{"Component meaning"}</h3>
     <div className="component-table readable-component-table">
       {terms.map((term) => <div className="component-row readable-component-row" key={`${term.id}-${term.row}`}>
         <span className="component-group"><strong>{term.nick}</strong></span>
-        <span className="component-readable"><em>{termMeaning(term, language)}</em><small>{term.polarity ? (language === "zh" ? `极性：${term.polarity}` : `Polarity: ${term.polarity}`) : (language === "zh" ? "技术细节可在帮助页查看。" : "Technical law/form/placement details are available in Help.")}</small></span>
+        <span className="component-readable"><em>{termMeaning(term, language)}</em><small>{term.polarity ? (`Polarity: ${term.polarity}`) : ("Technical law/form/placement details are available in Help.")}</small></span>
       </div>)}
     </div>
   </div>;
