@@ -443,10 +443,11 @@ export function DataImportWorkspace({
   async function loadSampleData() {
     setMessage(null);
     try {
-      const response = await fetch(
-        "/sample_data/happymeasure_combined_wide_v2_anonymized.csv",
-        { cache: "no-store" },
+      const sampleUrl = new URL(
+        "sample_data/happymeasure_combined_wide_v2_anonymized.csv",
+        new URL(import.meta.env.BASE_URL || "./", window.location.href),
       );
+      const response = await fetch(sampleUrl, { cache: "no-store" });
       if (!response.ok)
         throw new Error(`Sample file request failed (${response.status})`);
       const csvText = await response.text();
