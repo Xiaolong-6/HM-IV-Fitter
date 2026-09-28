@@ -329,7 +329,18 @@ function componentPlainRole(component: ModelSpec["series"][number], language: La
 
 function deriveReportSemantics(result: FitResult | null, language: Language): ReportSemantics {
   if (!result) {
-    return { fitStatus: rt(language, "unavailable"), reportMode: rt(language, "unavailable"), mainIssue: rt(language, "noMainIssue"), usable: rt(language, "usableNo"), tone: "none", mode: "unavailable", measuredScale: 0, maxFitCurrent: 0, maxResidual: 0, nearBoundParameters: [] };
+    return {
+      fitStatus: rt(language, "unavailable"),
+      reportMode: rt(language, "unavailable"),
+      mainIssue: "—",
+      usable: "—",
+      tone: "none",
+      mode: "unavailable",
+      measuredScale: 0,
+      maxFitCurrent: 0,
+      maxResidual: 0,
+      nearBoundParameters: [],
+    };
   }
   const measuredScale = dataScale(result.curves.current_measured_A);
   const maxFitCurrent = Math.max(...finiteAbs(result.curves.current_fit_A), 0);
@@ -567,6 +578,27 @@ export function ReportWorkflowPage({ selectedTrace, hasSelectedTrace, model, res
   void sidePct;
   void leftPct;
   void onResizeStart;
+
+  if (!result) {
+    return (
+      <section className="workflow-page report-page scroll-page report-page-single-column scientific-report-page">
+        <main className="report-main-column report-document-flow">
+          <ReportHero
+            result={null}
+            semantics={semantics}
+            traceName={traceName}
+            model={model}
+            appVersion={appVersion}
+            verdict={verdict}
+            isFitting={isFitting}
+            setActiveView={setActiveView}
+            language={language}
+          />
+        </main>
+      </section>
+    );
+  }
+
   return <section className="workflow-page report-page scroll-page report-page-single-column scientific-report-page">
     <ReportExportActions result={result} report={report} invalid={invalid} reportMessage={reportMessage} onExportReportHtml={onExportReportHtml} onExportReportCsv={onExportReportCsv} language={language} />
     <main className="report-main-column report-document-flow">
