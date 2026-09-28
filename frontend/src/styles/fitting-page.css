@@ -1674,3 +1674,213 @@
     width: 100%;
   }
 }
+
+
+/* Two-column Fit layout: narrow persistent setup sidebar + analysis workspace. */
+.fitting-page.fitting-page-two-column {
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: clamp(280px, 20vw, 320px) minmax(0, 1fr);
+  gap: calc(12px * var(--app-zoom));
+  overflow: hidden;
+}
+
+.fit-setup-sidebar {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 0;
+}
+
+.fitting-analysis-main {
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-rows: minmax(330px, auto) auto;
+  align-content: start;
+  gap: calc(12px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel {
+  height: auto;
+  min-height: 100%;
+  padding: calc(12px * var(--app-zoom));
+  border: 1px solid var(--theme-border);
+  border-radius: calc(12px * var(--app-zoom));
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+.fit-config-sidebar-content {
+  display: grid;
+  gap: calc(12px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel .fit-config-title {
+  padding: 0 0 calc(8px * var(--app-zoom));
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.fit-config-sidebar-panel .fit-config-title h2 {
+  margin: 0;
+  font-size: calc(16px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel .fit-bottom-voltage {
+  min-width: 0;
+}
+
+.fit-config-sidebar-panel .fit-bottom-voltage-title {
+  margin-bottom: calc(6px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel .fit-bottom-voltage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: calc(7px * var(--app-zoom));
+}
+
+.fit-config-advanced-inline {
+  display: grid;
+  gap: calc(9px * var(--app-zoom));
+  padding-top: calc(10px * var(--app-zoom));
+  border-top: 1px solid #e2e8f0;
+}
+
+.fit-config-advanced-title {
+  margin: 0;
+  font-size: calc(13px * var(--app-zoom));
+  font-weight: 900;
+  color: #334155;
+}
+
+.fit-config-sidebar-panel .advanced-objective-body {
+  display: grid;
+  gap: calc(12px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel .setup-section,
+.fit-config-sidebar-panel .fit-config-section {
+  display: grid;
+  gap: calc(7px * var(--app-zoom));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.fit-config-sidebar-panel .setup-section h3,
+.fit-config-sidebar-panel .fit-config-section h3 {
+  margin: 0;
+  font-size: calc(11px * var(--app-zoom));
+  font-weight: 900;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.045em;
+}
+
+.fit-config-sidebar-panel .setup-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(7px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel label,
+.fit-config-sidebar-panel .setup-grid label {
+  min-width: 0;
+}
+
+.fit-config-sidebar-panel input:not([type="checkbox"]),
+.fit-config-sidebar-panel select {
+  width: 100%;
+  min-width: 0;
+}
+
+.fit-config-sidebar-panel .check-row {
+  display: flex;
+  align-items: center;
+  gap: calc(6px * var(--app-zoom));
+}
+
+.fit-config-sidebar-panel .check-row input {
+  flex: 0 0 auto;
+}
+
+.fit-config-sidebar-actions {
+  padding-top: calc(10px * var(--app-zoom));
+  border-top: 1px solid #e2e8f0;
+}
+
+.fit-config-sidebar-actions .fit-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: calc(7px * var(--app-zoom));
+}
+
+.fit-config-sidebar-actions .fit-action-row > button {
+  width: 100%;
+  min-width: 0;
+}
+
+.fit-config-sidebar-status {
+  display: grid;
+  gap: calc(7px * var(--app-zoom));
+  min-width: 0;
+}
+
+.fit-config-sidebar-panel .fit-status-report-stack,
+.fit-config-sidebar-panel .fit-status-compact {
+  width: 100%;
+  min-width: 0;
+}
+
+.fit-config-sidebar-panel .fit-status-compact {
+  justify-content: flex-start;
+  white-space: normal;
+}
+
+.fit-config-sidebar-panel .fit-status-text {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.fit-config-sidebar-panel .fit-config-message-stack {
+  display: grid;
+  gap: calc(5px * var(--app-zoom));
+}
+
+.fitting-page-two-column .plots-section,
+.fitting-page-two-column .parameters-section {
+  min-width: 0;
+  margin: 0;
+}
+
+.fitting-page-two-column .plot-grid.single-plot {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (max-width: 900px) {
+  .fitting-page.fitting-page-two-column {
+    overflow: auto;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fit-setup-sidebar,
+  .fitting-analysis-main {
+    overflow: visible;
+  }
+
+  .fit-config-sidebar-panel {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 520px) {
+  .fit-config-sidebar-panel .fit-bottom-voltage-grid,
+  .fit-config-sidebar-actions .fit-action-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
