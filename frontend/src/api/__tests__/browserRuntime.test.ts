@@ -63,6 +63,33 @@ describe("browser runtime worker lifecycle", () => {
     vi.unstubAllGlobals();
   });
 
+  it("keeps the worker alive when a non-fit request is aborted", async () => {
+    const controller = new AbortController();
+    const firstCall = browserCall("component_registry", null, controller.signal);
+
+    expect(FakeWorker.instances).toHaveLength(1);
+    const firstWorker = FakeWorker.instances[0];
+
+    controller.abort();
+
+    await expect(firstCall).rejects.toMatchObject({ name: "AbortError" });
+    expect(firstWorker.terminated).toBe(false);
+
+    const secondCall = browserCall<{ ready: boolean }>("equations", {
+      core: [],
+      series: [],
+      parallel: [],
+      temperature_K: 300,
+      version: "test",
+    });
+
+    expect(FakeWorker.instances).toHaveLength(1);
+    expect(FakeWorker.instances[0]).toBe(firstWorker);
+
+    firstWorker.respond({ ready: true });
+    await expect(secondCall).resolves.toEqual({ ready: true });
+  });
+
   it("terminates a fit worker on abort and creates a fresh worker for the next call", async () => {
     const controller = new AbortController();
     const firstCall = browserCall("fit", { sample: true }, controller.signal);
