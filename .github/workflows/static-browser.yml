@@ -1,0 +1,110 @@
+name: Static browser prototype
+
+on:
+  push:
+    branches:
+      - feat/static-browser-standalone
+  pull_request:
+    paths:
+      - "backend/**"
+      - "frontend/**"
+      - "docs/STATIC_BROWSER_PLAN.md"
+      - "package.json"
+      - "vite.config.ts"
+      - ".github/workflows/static-browser.yml"
+  workflow_dispatch:
+
+jobs:
+  static-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pytest httpx
+
+      - name: Run Python tests
+        env:
+          PYTHONPATH: backend
+        run: |
+          python -m pytest backend/tests -q
+          python -m compileall -q backend/ivfitter backend/tests
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
+
+      - name: Install Node dependencies
+        run: |
+          npm ci
+          npm ci --prefix frontend
+
+      - name: Run frontend tests
+        run: npm --prefix frontend run test -- --run --reporter=dot
+
+      - name: Build static browser app
+        run: npm run build:static
+
+      - name: Audit static artifacts
+        run: |
+          test -f frontend/dist/index.html
+          test -f frontend/dist/browser-runtime.worker.js
+          test -f frontend/dist/static-python/manifest.json
+          test -f frontend/dist/static-python/ivfitter/browser_bridge.py
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("frontend/dist/static-python")
+          manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
+          files = set(manifest["files"])
+          required = {
+              "ivfitter/browser_bridge.py",
+              "ivfitter/core/fitting_engine.py",
+              "ivfitter/core/model_spec.py",
+              "ivfitter/io/import_trace.py",
+          }
+          missing = sorted(required - files)
+          if missing:
+              raise SystemExit(f"Static Python manifest missing required files: {missing}")
+          print(f"Static Python payload: {len(files)} Python files")
+          PY
+
+      - name: Install browser smoke dependency
+        working-directory: frontend
+        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Run real-browser static smoke
+        run: |
+          python -m http.server 4173 --bind 127.0.0.1 --directory frontend/dist > /tmp/ivfitter-static-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID' EXIT
+          for i in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          cd frontend
+          npx playwright test static-browser.spec.ts --reporter=line --workers=1
