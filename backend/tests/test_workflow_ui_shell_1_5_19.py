@@ -52,19 +52,23 @@ def test_existing_components_are_kept_on_task_specific_pages():
     assert "FitProcessDiagnostics" in report_page
 
 
-def test_four_step_shell_keeps_compact_utilities_and_no_sidebar_state():
+def test_four_step_shell_is_centered_and_has_no_global_utilities():
     nav = read_repo_file("frontend/src/components/WorkflowTopNav.tsx")
     page = read_repo_file("frontend/src/pages/FittingPage.tsx")
     layout_hook = read_repo_file("frontend/src/pages/hooks/useWorkflowLayoutState.ts")
     css = read_repo_file("frontend/src/styles/four-step-shell.css")
 
-    assert "onLanguageChange" in nav
-    assert "zoomControl" in nav
-    assert "workflow-version" in nav
+    assert "onLanguageChange" not in nav
+    assert "zoomControl" not in nav
+    assert "workflow-version" not in nav
+    assert "中文" not in nav
     assert "four-step-app" in page
     assert "four-step-workspace" in page
     assert "sidebarCollapsed" not in layout_hook
+    assert "language" not in layout_hook
     assert "grid-template-columns: repeat(4" in css
+    assert "justify-content: center" in css
+    assert "workflow-top-utilities" not in css
 
 
 def test_report_page_exports_are_present():
