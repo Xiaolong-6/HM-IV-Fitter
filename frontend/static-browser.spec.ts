@@ -229,6 +229,8 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await expect(page.locator(".fitting-page-one-column")).toBeVisible();
   const runFit = page.getByRole("button", { name: "Run fit" });
   await expect(runFit).toBeEnabled();
+  await expect(page.locator(".plot-grid.single-plot")).toBeVisible();
+  await expect(page.locator(".plot-grid.paired-plot")).toHaveCount(0);
   await page.screenshot({
     path: "test-results/four-step-fit.png",
     fullPage: true,
@@ -426,10 +428,19 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
     timeout: 30_000,
   });
+  await expect(page.locator(".plot-grid.paired-plot")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-fit-result.png",
+    fullPage: true,
+  });
 
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-report-result.png",
+    fullPage: true,
+  });
 
   const htmlButton = page.getByRole("button", { name: /Download .*HTML/ });
   const csvButton = page.getByRole("button", { name: /Download .*CSV/ });
