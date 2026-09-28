@@ -309,6 +309,89 @@ def _active_bound_summary(records, active_mask) -> list[str]:
     return out
 
 
+def _validation_failure_result(
+    request: FitRequest,
+    warnings: list[FitWarning],
+    fit_started_at: float,
+) -> FitResult:
+    """Return a diagnostic result without evaluating or optimizing an invalid model."""
+    all_params = _all_fit_params(request)
+    parameters = {
+        key: ParameterResult(
+            value=float(spec.value),
+            unit=spec.unit,
+            fixed=not bool(spec.fit),
+            lower=spec.lower,
+            upper=spec.upper,
+            stderr=None,
+        )
+        for key, _comp, _name, spec in all_params
+    }
+    initial_values = {
+        key: float(spec.value)
+        for key, _comp, _name, spec in all_params
+        if bool(spec.fit)
+    }
+    reportable, reason = reportability_from_warnings(False, warnings, {})
+    error_summary = "; ".join(
+        f"{warning.code}: {warning.message}"
+        for warning in warnings
+        if warning.severity == "error"
+    )
+    elapsed_s = float(time.monotonic() - fit_started_at)
+    point_count = len(request.trace.voltage_V)
+    diagnostics = FitDiagnosticsSummary(
+        fit_run_id=f"{request.trace.trace_id or 'trace'}-{int(time.time() * 1000)}",
+        trace_name=request.trace.trace_id,
+        model_signature=_model_signature(request.model),
+        fit_mode=request.config.fit_speed,
+        voltage_range_used=[request.config.v_min, request.config.v_max],
+        points_total=point_count,
+        points_in_selected_range=0,
+        points_used=0,
+        points_excluded=0,
+        free_parameter_count=sum(1 for _key, _comp, _name, spec in all_params if bool(spec.fit)),
+        fixed_parameter_count=sum(1 for _key, _comp, _name, spec in all_params if not bool(spec.fit)),
+        degrees_of_freedom=0,
+        elapsed_s=elapsed_s,
+        solver_name="validation_gate",
+        solver_mode=request.config.solver_mode,
+        residual_weighting=request.config.weighting,
+        loss_function=request.config.loss,
+        objective_name="not_evaluated_invalid_model",
+        optimizer_status=None,
+        optimizer_message="Model validation failed before numerical evaluation.",
+        function_evaluations=0,
+        jacobian_evaluations=0,
+        optimizer_steps=0,
+        root_solver_failures=0,
+        warnings_count=len(warnings),
+    )
+    return FitResult(
+        success=False,
+        reportable=reportable,
+        reportability_reason=reason,
+        message=f"Model validation failed: {error_summary}",
+        model=copy.deepcopy(request.model),
+        config=request.config,
+        parameters=parameters,
+        initial_values=initial_values or None,
+        metrics={},
+        warnings=warnings,
+        fit_diagnostics=diagnostics,
+        curves=FitCurves(
+            voltage_V=list(request.trace.voltage_V),
+            current_measured_A=list(request.trace.current_A),
+            current_fit_A=[],
+            residual_A=[],
+            branch_currents_A={},
+            excluded_mask=[False] * point_count,
+        ),
+        equations=generate_equations(request.model),
+        software_version=__version__,
+    )
+
+
 def fit_trace(request: FitRequest) -> FitResult:
     """Fit one trace using ModelSpec and FitConfig, independent of any UI."""
     request = copy.deepcopy(request)
@@ -316,11 +399,7 @@ def fit_trace(request: FitRequest) -> FitResult:
     warnings: list[FitWarning] = validate_model_spec(request.model)
     validation_errors = [warning for warning in warnings if warning.severity == "error"]
     if validation_errors:
-        details = "; ".join(
-            f"{warning.code}: {warning.message}"
-            for warning in validation_errors
-        )
-        raise ValueError(f"Model validation failed: {details}")
+        return _validation_failure_result(request, warnings, fit_started_at)
     warnings.extend(deprecated_config_warnings(request.config))
     timeout_s = float(getattr(request.config, "run_timeout_s", 60.0) or 0.0)
     deadline = time.monotonic() + timeout_s if timeout_s > 0 else None
