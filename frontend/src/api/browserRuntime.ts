@@ -46,7 +46,9 @@ export function subscribeBrowserRuntimeStatus(
 ) {
   runtimeStatusListeners.add(listener);
   listener(runtimeStatus);
-  return () => runtimeStatusListeners.delete(listener);
+  return () => {
+    runtimeStatusListeners.delete(listener);
+  };
 }
 
 function staticBaseUrl(): string {
