@@ -121,3 +121,25 @@ def test_custom_expression_rejects_unknown_parameter_symbol_before_evaluation():
     )
 
     assert "custom_invalid_expression" in error_codes(model)
+
+
+def test_custom_parameter_cannot_shadow_solver_variable_or_function():
+    variable_shadow = ModelSpec(
+        parallel=[
+            custom_component(
+                params={"V": ParameterSpec(value=2.0)},
+                expression="V",
+            )
+        ]
+    )
+    function_shadow = ModelSpec(
+        parallel=[
+            custom_component(
+                params={"exp": ParameterSpec(value=2.0)},
+                expression="exp(V)",
+            )
+        ]
+    )
+
+    assert "custom_reserved_parameter_name" in error_codes(variable_shadow)
+    assert "custom_reserved_parameter_name" in error_codes(function_shadow)
