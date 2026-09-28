@@ -71,13 +71,21 @@ def validate_expression_symbols(expression: str, allowed_names: set[str]) -> Non
         raise ValueError(f"Unknown expression symbol(s): {joined}")
 
 
+def expression_function_names() -> set[str]:
+    """Return names reserved for approved numeric functions."""
+    return set(_ALLOWED_FUNCS)
+
+
 def evaluate_custom_expression(vj, expression: str, params: dict[str, float], polarity: str):
     """Evaluate a vectorized custom expression using Vj, absVj, u, s, and parameters."""
     tree = _parse_and_validate_expression(expression)
     code = compile(tree, "<custom_expr>", "eval")
     vt = float(params.get("Vt_V", params.get("Vt", 0.0)))
     vs = float(params.get("Vs_V", params.get("Vs", 1.0)))
-    env = dict(_ALLOWED_FUNCS)
+    # Parameters are loaded first; approved functions and solver-owned variables
+    # overwrite them so bypassed payloads cannot shadow e.g. exp(), V, or I.
+    env = dict(params)
+    env.update(_ALLOWED_FUNCS)
     arr = np.asarray(vj, dtype=float)
     abs_arr = np.abs(arr)
     env.update({
@@ -95,7 +103,6 @@ def evaluate_custom_expression(vj, expression: str, params: dict[str, float], po
         "u": polarity_argument(arr, vt, vs, polarity),
         "s": polarity_sign(arr, polarity),
     })
-    env.update(params)
     return eval(code, {"__builtins__": {}}, env)
 
 
@@ -108,8 +115,10 @@ def evaluate_custom_variable_expression(expression: str, params: dict[str, float
     """
     tree = _parse_and_validate_expression(expression)
     code = compile(tree, "<custom_graph_expr>", "eval")
-    env = dict(_ALLOWED_FUNCS)
+    # Solver variables and approved functions are authoritative namespaces.
+    # This remains safe even if a hand-authored payload bypasses validation.
+    env = dict(params)
+    env.update(_ALLOWED_FUNCS)
     env.update({"min": np.minimum, "max": np.maximum})
-    env.update(params)
     env.update(variables)
     return eval(code, {"__builtins__": {}}, env)
