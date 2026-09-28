@@ -155,7 +155,7 @@ export function validateCustomExpression(
 function legendItems(symbols: string[], language: Language): VariableLegendItem[] {
   return symbols.map((v) => ({
     symbol: v,
-    description: CUSTOM_VARIABLES[v]?.[language === "zh" ? "zh" : "en"] ?? v,
+    description: CUSTOM_VARIABLES[v]?.["en"] ?? v,
   }));
 }
 
@@ -223,7 +223,7 @@ export function inferredCustomScaleDescription(zone: "main" | "branches", expres
  */
 export function physicalFormLabel(zone: "main" | "branches", language: Language): string {
   if (zone === "main") {
-    return language === "zh" ? "主路压降：ΔV = f(I)" : "Main-path voltage drop: ΔV = f(I)";
+    return "Main-path voltage drop: ΔV = f(I)";
   }
-  return language === "zh" ? "支路电流：I = f(V_i)" : "Branch current: I = f(V_i)";
+  return "Branch current: I = f(V_i)";
 }
