@@ -83,6 +83,16 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
       version: "static-browser-smoke",
     };
 
+    const validation = await call<
+      Array<{ code: string; severity: string; message: string }>
+    >("validate_model", {
+      core: [],
+      series: [],
+      parallel: [],
+      temperature_K: 0,
+      version: "static-browser-invalid-model",
+    });
+
     const fit = await call<{
       success: boolean;
       parameters: Record<string, { value: number }>;
@@ -103,25 +113,34 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
     });
 
     const report = await call<{ markdown: string }>("export_report", fit);
+    const reportCsv = await call<{ text: string }>("export_report_csv", fit);
 
     worker.terminate();
 
     return {
       hasDiode: registry.some((item) => item.function_type === "diode"),
       importedPoints: imported.traces[0].trace.voltage_V.length,
+      invalidModelRejected: validation.some(
+        (warning) =>
+          warning.code === "nonpositive_temperature" &&
+          warning.severity === "error",
+      ),
       fitSuccess: fit.success,
       fittedResistance: fit.parameters["Rsh.Rsh_ohm"]?.value,
       fittedPoints: fit.curves.current_fit_A.length,
       reportHeading: report.markdown.includes("# IV-fitter Web report"),
+      reportCsvHasParameter: reportCsv.text.includes("Rsh.Rsh_ohm"),
     };
   });
 
   expect(result.hasDiode).toBe(true);
   expect(result.importedPoints).toBe(5);
+  expect(result.invalidModelRejected).toBe(true);
   expect(result.fitSuccess).toBe(true);
   expect(Math.abs((result.fittedResistance ?? 0) - 1000)).toBeLessThan(0.1);
   expect(result.fittedPoints).toBe(5);
   expect(result.reportHeading).toBe(true);
+  expect(result.reportCsvHasParameter).toBe(true);
 });
 
 
@@ -270,6 +289,35 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toBeVisible();
   await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+});
+
+test("four-step navigation remains usable on a narrow viewport", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/pyodide/**", async (route) => {
+    await route.abort("failed");
+  });
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.goto("http://127.0.0.1:4173/");
+
+  const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
+  for (const name of [
+    "Import data",
+    "Model builder",
+    "Fit",
+    "Report",
+  ]) {
+    const button = workflow.getByRole("button", { name: new RegExp(name) });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(420);
+  }
+
+  const overflow = await page.evaluate(() => ({
+    body: document.body.scrollWidth - document.body.clientWidth,
+    html: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  expect(Math.max(overflow.body, overflow.html)).toBeLessThanOrEqual(1);
 });
 
 test("static UI reports browser runtime bootstrap failure and offers retry", async ({ page }) => {
