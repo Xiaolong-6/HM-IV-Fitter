@@ -1,4 +1,4 @@
-import type { ComponentSpec, FitResult, Location, ModelSpec, ParameterSpec } from "./types";
+import type { ComponentSpec, FitResult, Location, ModelSpec, ParameterResult, ParameterSpec } from "./types";
 
 export type PlacementGroupId = "main" | "junction" | "branches" | "modifiers";
 export interface ParameterRowModel {
@@ -136,38 +136,228 @@ export function setComponentFitState(model: ModelSpec, location: Location, compo
   return updateComponentParams(model, location, componentId, (spec) => ({ ...spec, fit }));
 }
 
-function seedComponentFromFittedValues(model: ModelSpec, result: FitResult | null, location: Location, componentId: string): ModelSpec {
-  if (!result) return model;
-  const copy = structuredClone(model) as ModelSpec;
-  copy[location] = copy[location].map((component) => {
-    if (component.id !== componentId) return component;
-    let changed = false;
-    const params = Object.fromEntries(Object.entries(component.params).map(([paramName, spec]) => {
-      const fitted = result.parameters[parameterKey(componentId, paramName)];
-      if (!fitted || !Number.isFinite(fitted.value)) return [paramName, spec];
-      changed = true;
-      return [paramName, { ...spec, value: fitted.value }];
-    }));
-    if (!changed) return component;
-    const metadata = { ...(component.metadata ?? {}) };
-    const existing = (metadata.parameter_sources as Record<string, unknown> | undefined) ?? {};
-    metadata.parameter_sources = Object.fromEntries(Object.entries(component.params).map(([paramName]) => {
-      const fitted = result.parameters[parameterKey(componentId, paramName)];
-      const previous = (existing[paramName] as object | undefined) ?? {};
-      return [paramName, fitted ? { ...previous, initial: "fit_derived_initial" } : previous];
-    }));
-    return { ...component, params, metadata };
-  });
-  return copy;
-}
-
-export function seedModelFromFittedValues(model: ModelSpec, result: FitResult | null): ModelSpec {
-  if (!result) return model;
-  let next = model;
-  for (const location of ["series", "core", "parallel"] as const) {
-    for (const component of next[location]) {
-      next = seedComponentFromFittedValues(next, result, location, component.id);
+function parameterAliasToken(name: string) {
+  let token = name.trim().toLowerCase();
+  for (const suffix of ["_ohm", "_a", "_v"]) {
+    if (token.endsWith(suffix)) {
+      token = token.slice(0, -suffix.length);
+      break;
     }
   }
+  return token;
+}
+
+function legacyComponentForParameter(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+) {
+  for (const location of ["series", "core", "parallel"] as const) {
+    const component = model[location].find((item) => item.id === componentId);
+    if (component?.params[paramName]) return component;
+  }
+  return null;
+}
+
+function graphParameterNameForLegacyParameter(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+): string | null {
+  const graphComponent = model.graph?.components.find(
+    (item) => item.id === componentId,
+  );
+  if (!graphComponent) return null;
+  if (graphComponent.params[paramName]) return paramName;
+
+  const legacyComponent = legacyComponentForParameter(model, componentId, paramName);
+  const legacySpec = legacyComponent?.params[paramName];
+  const legacyLabel = legacySpec?.label?.trim();
+  const legacyToken = parameterAliasToken(paramName);
+
+  const candidates = Object.entries(graphComponent.params)
+    .filter(([graphName, graphSpec]) => {
+      const graphLabel = graphSpec.label?.trim();
+      return (
+        graphLabel === paramName ||
+        (legacyLabel != null && legacyLabel.length > 0 && graphName === legacyLabel) ||
+        (legacyLabel != null &&
+          legacyLabel.length > 0 &&
+          graphLabel === legacyLabel) ||
+        parameterAliasToken(graphName) === legacyToken
+      );
+    })
+    .map(([graphName]) => graphName);
+
+  return candidates.length === 1 ? candidates[0] : null;
+}
+
+export function fittedParameterForModelParameter(
+  model: ModelSpec,
+  result: FitResult | null,
+  componentId: string,
+  paramName: string,
+): ParameterResult | undefined {
+  if (!result) return undefined;
+
+  const direct = result.parameters[parameterKey(componentId, paramName)];
+  if (direct) return direct;
+
+  const graphName = graphParameterNameForLegacyParameter(
+    model,
+    componentId,
+    paramName,
+  );
+  if (!graphName) return undefined;
+  return result.parameters[parameterKey(componentId, graphName)];
+}
+
+function markFitDerivedInitial(
+  metadata: Record<string, unknown>,
+  paramName: string,
+) {
+  const existing =
+    (metadata.parameter_sources as Record<string, unknown> | undefined) ?? {};
+  const previous = (existing[paramName] as object | undefined) ?? {};
+  metadata.parameter_sources = {
+    ...existing,
+    [paramName]: { ...previous, initial: "fit_derived_initial" },
+  };
+}
+
+function seedLegacyProjection(
+  model: ModelSpec,
+  result: FitResult,
+): ModelSpec {
+  const next = structuredClone(model) as ModelSpec;
+  for (const location of ["series", "core", "parallel"] as const) {
+    next[location] = next[location].map((component) => {
+      let changed = false;
+      const metadata = { ...(component.metadata ?? {}) };
+      const params = Object.fromEntries(
+        Object.entries(component.params).map(([paramName, spec]) => {
+          const fitted = fittedParameterForModelParameter(
+            model,
+            result,
+            component.id,
+            paramName,
+          );
+          if (
+            !fitted ||
+            fitted.fixed ||
+            !Number.isFinite(fitted.value) ||
+            spec.fit === false
+          ) {
+            return [paramName, spec];
+          }
+          changed = true;
+          markFitDerivedInitial(metadata, paramName);
+          return [paramName, { ...spec, value: fitted.value }];
+        }),
+      );
+      return changed ? { ...component, params, metadata } : component;
+    });
+  }
   return next;
+}
+
+function seedGraphProjection(model: ModelSpec, result: FitResult): ModelSpec {
+  if (!model.graph) return model;
+  const next = structuredClone(model) as ModelSpec;
+  if (!next.graph) return next;
+
+  next.graph.components = next.graph.components.map((component) => {
+    let changed = false;
+    const metadata = { ...(component.metadata ?? {}) };
+    const params = Object.fromEntries(
+      Object.entries(component.params).map(([paramName, spec]) => {
+        const fitted = result.parameters[parameterKey(component.id, paramName)];
+        if (
+          !fitted ||
+          fitted.fixed ||
+          !Number.isFinite(fitted.value) ||
+          spec.fit === false
+        ) {
+          return [paramName, spec];
+        }
+        changed = true;
+        markFitDerivedInitial(metadata, paramName);
+        return [paramName, { ...spec, value: fitted.value }];
+      }),
+    );
+    return changed ? { ...component, params, metadata } : component;
+  });
+
+  return next;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function seedModelBuilderGraphMetadata(
+  candidate: unknown,
+  result: FitResult,
+): unknown {
+  if (!isRecord(candidate) || !Array.isArray(candidate.components)) {
+    return candidate;
+  }
+
+  return {
+    ...candidate,
+    components: candidate.components.map((rawComponent) => {
+      if (!isRecord(rawComponent) || typeof rawComponent.id !== "string") {
+        return rawComponent;
+      }
+      if (!Array.isArray(rawComponent.parameters)) return rawComponent;
+
+      return {
+        ...rawComponent,
+        parameters: rawComponent.parameters.map((rawParameter) => {
+          if (
+            !isRecord(rawParameter) ||
+            typeof rawParameter.symbol !== "string"
+          ) {
+            return rawParameter;
+          }
+          const fitted =
+            result.parameters[
+              parameterKey(rawComponent.id as string, rawParameter.symbol)
+            ];
+          if (!fitted || fitted.fixed || !Number.isFinite(fitted.value)) {
+            return rawParameter;
+          }
+          return { ...rawParameter, value: fitted.value };
+        }),
+      };
+    }),
+  };
+}
+
+function seedModelBuilderMetadata(
+  model: ModelSpec,
+  result: FitResult,
+): ModelSpec {
+  if (!model.graph?.metadata) return model;
+  const next = structuredClone(model) as ModelSpec;
+  if (!next.graph?.metadata) return next;
+
+  for (const key of ["modelBuilder", "modelBuilderV3"] as const) {
+    if (!(key in next.graph.metadata)) continue;
+    next.graph.metadata[key] = seedModelBuilderGraphMetadata(
+      next.graph.metadata[key],
+      result,
+    );
+  }
+  return next;
+}
+
+export function seedModelFromFittedValues(
+  model: ModelSpec,
+  result: FitResult | null,
+): ModelSpec {
+  if (!result) return model;
+  const legacySeeded = seedLegacyProjection(model, result);
+  const graphSeeded = seedGraphProjection(legacySeeded, result);
+  return seedModelBuilderMetadata(graphSeeded, result);
 }
