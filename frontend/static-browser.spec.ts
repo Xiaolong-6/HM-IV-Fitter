@@ -361,7 +361,7 @@ test("successful synthetic fit exports reports and model changes invalidate it",
               {
                 symbol: "R",
                 value: 1000,
-                lower: 0,
+                lower: 1e-12,
                 upper: 1e9,
                 fit: true,
                 unit: "ohm",
