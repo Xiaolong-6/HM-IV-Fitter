@@ -1,9 +1,6 @@
 name: Static browser prototype
 
 on:
-  push:
-    branches:
-      - feat/static-browser-standalone
   pull_request:
     paths:
       - "backend/**"
@@ -13,6 +10,10 @@ on:
       - "vite.config.ts"
       - ".github/workflows/static-browser.yml"
   workflow_dispatch:
+
+concurrency:
+  group: static-browser-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   static-browser:
