@@ -125,11 +125,21 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
 });
 
 
-test("static UI imports the bundled HappyMeasure sample through browser mode", async ({ page }) => {
+test("static UI uses four-step workflow and imports bundled HappyMeasure sample", async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto("http://127.0.0.1:4173/");
 
-  await page.getByRole("button", { name: "Data" }).click();
+  const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
+  await expect(workflow.getByRole("button", { name: "1 Import data" })).toHaveAttribute(
+    "aria-current",
+    "step",
+  );
+  await expect(workflow.getByRole("button", { name: "2 Model builder" })).toBeVisible();
+  await expect(workflow.getByRole("button", { name: "3 Fit" })).toBeVisible();
+  await expect(workflow.getByRole("button", { name: "4 Report" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Start" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Help" })).toHaveCount(0);
+
   await page.getByRole("button", { name: "Sample data" }).click();
   await page.getByRole("button", { name: "Load sample data" }).click();
 
@@ -138,4 +148,9 @@ test("static UI imports the bundled HappyMeasure sample through browser mode", a
   ).toBeVisible({ timeout: 180_000 });
   const importSummary = page.getByRole("region", { name: "Import summary" });
   await expect(importSummary.getByText(/14 traces · 1330 points/)).toBeVisible();
+
+  await page.screenshot({
+    path: "test-results/four-step-import.png",
+    fullPage: true,
+  });
 });
