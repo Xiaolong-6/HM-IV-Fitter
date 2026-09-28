@@ -206,11 +206,9 @@ function AdvancedRunOptions({
           </label>
           <NumericInput
             disabled={disabled}
-            label={language === "zh" ? "运行超时 (s)" : "Run timeout (s)"}
+            label={"Run timeout (s)"}
             help={
-              language === "zh"
-                ? "超过这个时间会自动停止本次拟合。默认 60 秒。"
-                : "Automatically stop this fit after this many seconds. Default is 60 s."
+              "Automatically stop this fit after this many seconds. Default is 60 s."
             }
             value={config.run_timeout_s ?? 60}
             onCommit={(v) =>
@@ -339,7 +337,7 @@ export function FitConfigPanel({
           aria-expanded={advancedOpen}
           onClick={() => setAdvancedOpen((open) => !open)}
         >
-          {language === "zh" ? "高级" : "Advanced"}
+          {"Advanced"}
         </button>
         {actionDock ? (
           <div className="fit-config-actions">{actionDock}</div>
@@ -351,10 +349,10 @@ export function FitConfigPanel({
           ) : null}
         </div>
       </div>
-      {advancedOpen ? <div className="fit-config-advanced-popover" ref={advancedRef} role="dialog" aria-label={language === "zh" ? "高级目标函数、运行选项和求解器" : "Advanced objective, run options, and solver"}>
+      {advancedOpen ? <div className="fit-config-advanced-popover" ref={advancedRef} role="dialog" aria-label={"Advanced objective, run options, and solver"}>
         <div className="fit-config-advanced-popover-head">
-          <strong>{language === "zh" ? "目标函数 / 运行选项 / 求解器" : "Objective / run options / solver"}</strong>
-          <button type="button" onClick={() => setAdvancedOpen(false)}>{language === "zh" ? "关闭" : "Close"}</button>
+          <strong>{"Objective / run options / solver"}</strong>
+          <button type="button" onClick={() => setAdvancedOpen(false)}>{"Close"}</button>
         </div>
         <div className="fit-config-inline-options">
           <AdvancedRunOptions
