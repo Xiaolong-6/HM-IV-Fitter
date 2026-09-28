@@ -1645,3 +1645,32 @@
 .fit-report-inline.available:hover {
   background: #eff6ff !important;
 }
+
+
+/* Static-browser stabilization: compact empty Report action instead of a full-width bar. */
+.report-hero-section .compact-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(12px * var(--app-zoom));
+  padding-top: calc(2px * var(--app-zoom));
+}
+.report-hero-section .compact-empty-state p {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.report-hero-section .compact-empty-state .primary {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: calc(132px * var(--app-zoom));
+  padding-inline: calc(16px * var(--app-zoom));
+}
+@media (max-width: 640px) {
+  .report-hero-section .compact-empty-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .report-hero-section .compact-empty-state .primary {
+    width: 100%;
+  }
+}
