@@ -199,10 +199,40 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   });
 
   await workflow.getByRole("button", { name: "3 Fit" }).click();
+  await page.evaluate(() => {
+    (window as unknown as { __ivfitterStopClicked?: boolean }).__ivfitterStopClicked = false;
+    const clickStopWhenAvailable = () => {
+      const stop = Array.from(document.querySelectorAll("button")).find(
+        (button) => button.textContent?.includes("Stop fit"),
+      ) as HTMLButtonElement | undefined;
+      if (!stop) return false;
+      stop.click();
+      (window as unknown as { __ivfitterStopClicked?: boolean }).__ivfitterStopClicked = true;
+      return true;
+    };
+    const observer = new MutationObserver(() => {
+      if (clickStopWhenAvailable()) observer.disconnect();
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    });
+    clickStopWhenAvailable();
+  });
   await runFit.click();
-  const stopFit = page.getByRole("button", { name: "Stop fit" });
-  await expect(stopFit).toBeVisible();
-  await stopFit.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Boolean(
+            (window as unknown as { __ivfitterStopClicked?: boolean })
+              .__ivfitterStopClicked,
+          ),
+      ),
+    )
+    .toBe(true);
   await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
   await expect(page.getByText(/Cancelled ·/)).toBeVisible();
 
