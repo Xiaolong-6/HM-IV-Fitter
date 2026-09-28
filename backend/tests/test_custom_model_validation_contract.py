@@ -107,3 +107,17 @@ def test_custom_expression_rejects_unsafe_or_invalid_expression():
 
     assert "custom_invalid_expression" in error_codes(unsafe)
     assert "custom_no_expression" in error_codes(missing)
+
+
+
+def test_custom_expression_rejects_unknown_parameter_symbol_before_evaluation():
+    model = ModelSpec(
+        parallel=[
+            custom_component(
+                params={"A": ParameterSpec(value=2.0)},
+                expression="A*V+B",
+            )
+        ]
+    )
+
+    assert "custom_invalid_expression" in error_codes(model)
