@@ -27,7 +27,8 @@ import { APP_VERSION } from "../utils/version";
 import { checkLatestRelease, type ReleaseCheckResult } from "../services/releaseCheck";
 
 type ZoomStyle = CSSProperties & { "--app-zoom": number };
-// Web workflow uses a literal zoom scale: 100% means 1.0x CSS sizing.\nconst VISUAL_ZOOM_BASELINE = 1;
+// Web workflow uses a literal zoom scale: 100% means 1.0x CSS sizing.
+const VISUAL_ZOOM_BASELINE = 1;
 
 type FitStatusState = {
   isFitting: boolean;
