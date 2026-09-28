@@ -41,12 +41,14 @@ export function placementGroupForComponent(component: ComponentSpec): PlacementG
   return text.includes("modifier") ? "modifiers" : "branches";
 }
 
-export function placementGroupTitle(id: PlacementGroupId, language: "en" | "zh" = "en") {
-  const zh = language === "zh";
-  if (id === "main") return zh ? "主路 / 串联压降" : "Main path / series voltage drops";
-  if (id === "junction") return zh ? "结区核心支路" : "Junction core branches";
-  if (id === "branches") return zh ? "并联 / 漏电支路" : "Parallel and leakage branches";
-  return zh ? "修饰器 / 辅助项" : "Modifiers and auxiliary terms";
+export function placementGroupTitle(
+  id: PlacementGroupId,
+  _language: "en" = "en",
+) {
+  if (id === "main") return "Main path / series voltage drops";
+  if (id === "junction") return "Junction core branches";
+  if (id === "branches") return "Parallel and leakage branches";
+  return "Modifiers and auxiliary terms";
 }
 
 export function componentLawFormPlacement(component: ComponentSpec) {
