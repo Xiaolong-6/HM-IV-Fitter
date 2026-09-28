@@ -17,6 +17,7 @@ from ivfitter import __version__
 from .component_aliases import BIAS_DEPENDENT_CURRENT_TYPES
 from .evaluation import predict_current
 from .model_spec import ComponentSpec, ModelSpec
+from .model_validation import validate_model_spec
 
 MAX_SYNTHETIC_POINTS = 10000
 GENERATOR_VERSION = "synthetic-trace-v1"
@@ -174,6 +175,18 @@ def generate_synthetic_trace(
     trace_name: str,
     seed: int | None = None,
 ) -> SyntheticTraceResult:
+    validation_errors = [
+        warning
+        for warning in validate_model_spec(model)
+        if warning.severity == "error"
+    ]
+    if validation_errors:
+        details = "; ".join(
+            f"{warning.code}: {warning.message}"
+            for warning in validation_errors
+        )
+        raise ValueError(f"Synthetic model validation failed: {details}")
+
     _validate_component_support(model)
     voltage = build_voltage_sweep(voltage_start, voltage_stop, voltage_step)
     solver_mode = _synthetic_solver_mode(model)
