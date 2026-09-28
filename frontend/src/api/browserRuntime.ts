@@ -101,7 +101,9 @@ export function browserCall<T>(
         current.cleanup?.();
 
         if (method === "fit") {
-          disposeWorker();
+          // A fit abort hard-restarts the numerical worker. Reject every other
+          // request owned by that worker as well so no promise is left hanging.
+          disposeWorker(abortError());
         }
         reject(abortError());
       };
