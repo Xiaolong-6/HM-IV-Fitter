@@ -261,6 +261,13 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await expect(fitSidebar.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.locator(".plot-grid.single-plot")).toBeVisible();
   await expect(page.locator(".plot-grid.paired-plot")).toHaveCount(0);
+  const plotSectionBox = await page.locator(".plots-section").boundingBox();
+  const parameterSectionBox = await page.locator(".parameters-section").boundingBox();
+  expect(plotSectionBox).not.toBeNull();
+  expect(parameterSectionBox).not.toBeNull();
+  expect(plotSectionBox!.y + plotSectionBox!.height).toBeLessThanOrEqual(
+    parameterSectionBox!.y + 1,
+  );
   await page.screenshot({
     path: "test-results/four-step-fit.png",
     fullPage: true,
