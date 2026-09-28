@@ -123,3 +123,18 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
   expect(result.fittedPoints).toBe(5);
   expect(result.reportHeading).toBe(true);
 });
+
+
+test("static UI imports the bundled HappyMeasure sample through browser mode", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto("http://127.0.0.1:4173/");
+
+  await page.getByRole("button", { name: "Data" }).click();
+  await page.getByRole("button", { name: "Sample data" }).click();
+  await page.getByRole("button", { name: "Load sample data" }).click();
+
+  await expect(
+    page.getByText(/Sample HappyMeasure data loaded\. \(14 traces\)/),
+  ).toBeVisible({ timeout: 180_000 });
+  await expect(page.getByText(/14 traces ·/)).toBeVisible();
+});
