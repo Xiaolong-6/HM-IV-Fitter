@@ -4,8 +4,7 @@ import type { EquationSummary, FitConfig, FitResult, FitSessionStats, FunctionDe
 import { exportReport, exportReportCsv, fitTrace, getRegistry, equations } from "../api/client";
 import { emptyTrace, estimateResidualFloorA } from "../model/utils";
 import { seedModelFromFittedValues } from "../model/parameterGrouping";
-import { WorkflowSidebar, type AppView } from "../components/WorkflowSidebar";
-import { UserDocumentationPage } from "../components/UserDocumentationPage";
+import { WorkflowTopNav } from "../components/WorkflowTopNav";
 import { FitStatusBar } from "../components/FitStatusBar";
 import { FitConfigPanel, type FitDrawerMode } from "../components/FitConfigPanel";
 import { SyntheticTraceTool } from "../components/SyntheticTraceTool";
@@ -16,7 +15,6 @@ import { buildReportBaseName, emptyReportArtifacts, type ReportArtifacts } from 
 import { canGenerateReport, createErrorLifecycle, createRunningLifecycle, createTimeoutLifecycle, elapsedSecondsSince, nextRunId, shouldAcceptRunResult, terminalCancelledState, type FitLifecycleState } from "../model/fitLifecycle";
 import { buildHtmlReportDocument } from "../model/htmlReport";
 import { createInitialModel, initialConfig } from "../model/defaults";
-import { StartHerePage } from "./components/StartHerePage";
 import { ModelWorkflowPage, FittingWorkflowPage } from "./components/WorkflowSections";
 import { ReportWorkflowPage } from "./components/ReportWorkflowPage";
 import { usePaneResize } from "./hooks/usePaneResize";
@@ -29,7 +27,8 @@ import { APP_VERSION } from "../utils/version";
 import { checkLatestRelease, type ReleaseCheckResult } from "../services/releaseCheck";
 
 type ZoomStyle = CSSProperties & { "--app-zoom": number };
-const VISUAL_ZOOM_BASELINE = 1.7;
+// Web workflow uses a literal zoom scale: 100% means 1.0x CSS sizing.
+const VISUAL_ZOOM_BASELINE = 1;
 
 type FitStatusState = {
   isFitting: boolean;
@@ -56,7 +55,6 @@ type FittingPageState = {
   dismissedWarningKey: string;
   fitSessionStats: FitSessionStats;
   releaseCheck: ReleaseCheckResult | null;
-  releaseDemoUpdate: boolean;
 };
 
 type StateUpdater<T> = T | ((current: T) => T);
@@ -122,7 +120,6 @@ function createInitialFittingPageState(): FittingPageState {
       totalRootSolverFailures: 0,
     },
     releaseCheck: null,
-    releaseDemoUpdate: false,
   };
 }
 
@@ -151,7 +148,6 @@ export function FittingPage() {
     dismissedWarningKey,
     fitSessionStats,
     releaseCheck,
-    releaseDemoUpdate,
   } = pageState;
   const { isFitting, fitStartedAt, elapsedSeconds, lifecycle: fitLifecycle } = fitStatus;
 
@@ -178,7 +174,6 @@ export function FittingPage() {
   const setDismissedWarningKey = (value: StateUpdater<string>) => setPageState("dismissedWarningKey", value);
   const setFitSessionStats = (value: StateUpdater<FitSessionStats>) => setPageState("fitSessionStats", value);
   const setReleaseCheck = (value: StateUpdater<ReleaseCheckResult | null>) => setPageState("releaseCheck", value);
-  const setReleaseDemoUpdate = (value: StateUpdater<boolean>) => setPageState("releaseDemoUpdate", value);
   const updateFitStatus = (patch: Partial<FitStatusState> | ((current: FitStatusState) => FitStatusState)) => {
     setPageState("fitStatus", (current) =>
       typeof patch === "function" ? patch(current) : { ...current, ...patch },
@@ -203,8 +198,6 @@ export function FittingPage() {
     setReportPanePct,
     plotPanePct,
     setPlotPanePct,
-    sidebarCollapsed,
-    setSidebarCollapsed,
     language,
     setLanguage,
   } = useWorkflowLayoutState();
@@ -619,11 +612,10 @@ export function FittingPage() {
     />
   );
 
-  const effectiveReleaseUpdateAvailable = releaseDemoUpdate || Boolean(releaseCheck?.updateAvailable);
-  const effectiveLatestVersion = releaseDemoUpdate
-    ? `v${APP_VERSION}-demo-new`
-    : releaseCheck?.latestVersion ?? null;
-  const effectiveReleaseUrl = releaseCheck?.releaseUrl || "https://github.com/Xiaolong-6/iv_fitter_webui_mvp/releases";
+  const effectiveReleaseUpdateAvailable = Boolean(releaseCheck?.updateAvailable);
+  const effectiveLatestVersion = releaseCheck?.latestVersion ?? null;
+  const effectiveReleaseUrl =
+    releaseCheck?.releaseUrl || "https://github.com/Xiaolong-6/HM-IV-Fitter/releases";
 
   const openReleasePage = () => {
     window.open(effectiveReleaseUrl, "_blank", "noopener,noreferrer");
@@ -631,7 +623,7 @@ export function FittingPage() {
 
   const zoomControl = (
     <div
-      className="zoom-control sidebar-zoom-control"
+      className="zoom-control workflow-zoom-control"
       title={t(language, "appZoomHelp")}
     >
       <button
@@ -654,46 +646,23 @@ export function FittingPage() {
 
   return (
     <div
-      className={sidebarCollapsed ? "app sidebar-collapsed" : "app"}
+      className="app four-step-app"
       style={{ "--app-zoom": zoom * VISUAL_ZOOM_BASELINE } as ZoomStyle}
     >
-      <WorkflowSidebar
-        activeView={activeView}
+      <WorkflowTopNav
+        activeStep={activeView}
         onSelect={setActiveView}
         version={APP_VERSION}
-        collapsed={sidebarCollapsed}
-        onToggleCollapsed={() => setSidebarCollapsed((v) => !v)}
         language={language}
         onLanguageChange={setLanguage}
         zoomControl={zoomControl}
         updateAvailable={effectiveReleaseUpdateAvailable}
         latestVersion={effectiveLatestVersion}
-        onVersionClick={() => setReleaseDemoUpdate(true)}
         onReleaseClick={openReleasePage}
       />
-      <main
-        className={`workspace workflow-shell workflow-view-${activeView}`}
-        style={
-          activeView === "model"
-            ? {
-                display: "block",
-                gap: 0,
-                overflow: "hidden",
-                padding: 0,
-                position: "relative",
-              }
-            : undefined
-        }
-      >
-        {activeView === "start" ? (
-          <StartHerePage
-            setActiveView={setActiveView}
-            hasSelectedTrace={hasSelectedTrace}
-            result={result}
-            isFitting={isFitting}
-            reportAvailable={reportAvailable}
-          />
-        ) : activeView === "data" ? (
+
+      <main className={`workspace four-step-workspace workflow-view-${activeView}`}>
+        {activeView === "data" ? (
           <DataImportWorkspace
             language={language}
             traces={traces}
@@ -702,12 +671,12 @@ export function FittingPage() {
               setTraces(next);
               setResult(null);
               setReportArtifacts(emptyReportArtifacts);
-                      }}
+            }}
             onSelectTrace={(id) => {
               setSelectedTraceId(id);
               setResult(null);
               setReportArtifacts(emptyReportArtifacts);
-                        setNoTraceRunAttempted(false);
+              setNoTraceRunAttempted(false);
             }}
             onNextToFitting={() => setActiveView("model")}
           />
@@ -719,7 +688,7 @@ export function FittingPage() {
               setModel(next);
               setResult(null);
               setReportArtifacts(emptyReportArtifacts);
-                      }}
+            }}
             registry={registry}
             equationSummary={equationSummary}
             result={result}
@@ -736,12 +705,12 @@ export function FittingPage() {
                   setTraces(next);
                   setResult(null);
                   setReportArtifacts(emptyReportArtifacts);
-                              }}
+                }}
                 onSelectTrace={(id) => {
                   setSelectedTraceId(id);
                   setResult(null);
                   setReportArtifacts(emptyReportArtifacts);
-                                setNoTraceRunAttempted(false);
+                  setNoTraceRunAttempted(false);
                 }}
                 model={model}
                 language={language}
@@ -759,7 +728,7 @@ export function FittingPage() {
               setSelectedTraceId(id);
               setResult(null);
               setReportArtifacts(emptyReportArtifacts);
-                        setNoTraceRunAttempted(false);
+              setNoTraceRunAttempted(false);
             }}
             setActiveView={setActiveView}
             config={config}
@@ -777,7 +746,7 @@ export function FittingPage() {
             updateParameterModel={(next) => {
               setModel(next);
               setReportArtifacts(emptyReportArtifacts);
-                      }}
+            }}
             isFitting={isFitting}
             leftPct={fittingPanePct}
             plotPct={plotPanePct}
@@ -788,7 +757,7 @@ export function FittingPage() {
               startPaneResize(event, setPlotPanePct, 34, 76, "y")
             }
           />
-        ) : activeView === "report" ? (
+        ) : (
           <ReportWorkflowPage
             language={language}
             selectedTrace={selectedTrace}
@@ -808,15 +777,13 @@ export function FittingPage() {
             appVersion={APP_VERSION}
             leftPct={reportPanePct}
             onResizeStart={(event) =>
-              startPaneResize(event as ReactPointerEvent<HTMLDivElement>, setReportPanePct, 54, 82)
+              startPaneResize(
+                event as ReactPointerEvent<HTMLDivElement>,
+                setReportPanePct,
+                54,
+                82,
+              )
             }
-          />
-        ) : (
-          <UserDocumentationPage
-            language={language}
-            view={activeView}
-            registry={registry}
-            appVersion={APP_VERSION}
           />
         )}
       </main>

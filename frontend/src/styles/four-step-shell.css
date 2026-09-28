@@ -1,0 +1,318 @@
+/* Four-step browser workflow shell.
+   Visual language intentionally follows the compact Map Reconstruction web UI:
+   numbered horizontal steps, light chrome, and one viewport-filling workspace. */
+
+.app.four-step-app {
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  background: #f4f7fb;
+  color: #0f172a;
+}
+
+.workflow-top-shell {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: calc(18px * var(--app-zoom));
+  padding:
+    calc(10px * var(--app-zoom))
+    calc(22px * var(--app-zoom))
+    0;
+  background: #f4f7fb;
+}
+
+.workflow-step-nav {
+  position: relative;
+  min-width: 0;
+  max-width: calc(920px * var(--app-zoom));
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workflow-step-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #dbe4f0;
+  pointer-events: none;
+}
+
+.workflow-step-tab {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  height: calc(42px * var(--app-zoom));
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: calc(8px * var(--app-zoom));
+  padding: 0 calc(14px * var(--app-zoom));
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #94a3b8;
+  box-shadow: none;
+  font-size: calc(13px * var(--app-zoom));
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.workflow-step-tab:hover {
+  background: transparent;
+  color: #475569;
+}
+
+.workflow-step-tab.completed {
+  color: #475569;
+}
+
+.workflow-step-tab.active {
+  border-bottom-color: #315bf6;
+  background: transparent;
+  color: #315bf6;
+}
+
+.workflow-step-number {
+  color: inherit;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.workflow-top-utilities {
+  min-width: 0;
+  height: calc(42px * var(--app-zoom));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: calc(6px * var(--app-zoom));
+  padding-bottom: calc(5px * var(--app-zoom));
+}
+
+.workflow-language-control select,
+.workflow-top-utilities .zoom-control,
+.workflow-version {
+  min-height: calc(28px * var(--app-zoom));
+}
+
+.workflow-language-control select {
+  width: auto;
+  min-width: calc(58px * var(--app-zoom));
+  padding:
+    calc(4px * var(--app-zoom))
+    calc(24px * var(--app-zoom))
+    calc(4px * var(--app-zoom))
+    calc(8px * var(--app-zoom));
+  border: 1px solid #dbe4f0;
+  border-radius: calc(8px * var(--app-zoom));
+  background: #fff;
+  color: #475569;
+  font-size: calc(11px * var(--app-zoom));
+  font-weight: 700;
+}
+
+.workflow-top-utilities .zoom-control {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(3px * var(--app-zoom));
+  margin: 0;
+  padding: calc(2px * var(--app-zoom));
+  border: 1px solid #dbe4f0;
+  border-radius: calc(8px * var(--app-zoom));
+  background: #fff;
+}
+
+.workflow-top-utilities .zoom-control button {
+  width: calc(24px * var(--app-zoom));
+  min-width: calc(24px * var(--app-zoom));
+  height: calc(22px * var(--app-zoom));
+  padding: 0;
+  border: 0;
+  border-radius: calc(6px * var(--app-zoom));
+  background: transparent;
+  color: #475569;
+  box-shadow: none;
+  line-height: 1;
+}
+
+.workflow-top-utilities .zoom-control button:hover {
+  background: #f1f5f9;
+}
+
+.workflow-top-utilities .zoom-control span {
+  min-width: calc(38px * var(--app-zoom));
+  color: #64748b;
+  font-size: calc(10.5px * var(--app-zoom));
+  font-weight: 750;
+  text-align: center;
+}
+
+.workflow-version {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(5px * var(--app-zoom));
+  padding: 0 calc(8px * var(--app-zoom));
+  border: 1px solid transparent;
+  border-radius: calc(8px * var(--app-zoom));
+  background: transparent;
+  color: #94a3b8;
+  box-shadow: none;
+  font-size: calc(10.5px * var(--app-zoom));
+  font-weight: 750;
+}
+
+.workflow-version:hover {
+  border-color: #dbe4f0;
+  background: #fff;
+  color: #475569;
+}
+
+.workflow-version span {
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #315bf6;
+  color: #fff;
+  font-size: 0.78em;
+}
+
+.workspace.four-step-workspace {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  padding:
+    calc(8px * var(--app-zoom))
+    calc(18px * var(--app-zoom))
+    calc(16px * var(--app-zoom));
+}
+
+.four-step-workspace > .workflow-page,
+.four-step-workspace > .data-workspace,
+.four-step-workspace > .report-workflow-page,
+.four-step-workspace > .report-page {
+  min-height: 0;
+  height: 100%;
+}
+
+.four-step-workspace.workflow-view-model {
+  position: relative;
+}
+
+/* The new shell owns the viewport. Old sidebar-specific chrome must never
+   reserve space even if legacy styles remain in the bundle. */
+.four-step-app .sidebar,
+.four-step-app .sidebar-main,
+.four-step-app .sidebar-footer {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .workflow-top-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: calc(5px * var(--app-zoom));
+    padding:
+      calc(8px * var(--app-zoom))
+      calc(10px * var(--app-zoom))
+      0;
+  }
+
+  .workflow-step-nav {
+    max-width: none;
+  }
+
+  .workflow-step-tab {
+    justify-content: center;
+    height: calc(40px * var(--app-zoom));
+    padding: 0 calc(6px * var(--app-zoom));
+  }
+
+  .workflow-top-utilities {
+    height: auto;
+    justify-content: flex-end;
+    padding:
+      calc(2px * var(--app-zoom))
+      calc(2px * var(--app-zoom))
+      calc(5px * var(--app-zoom));
+  }
+
+  .workspace.four-step-workspace {
+    padding:
+      calc(6px * var(--app-zoom))
+      calc(10px * var(--app-zoom))
+      calc(10px * var(--app-zoom));
+  }
+}
+
+@media (max-width: 620px) {
+  .workflow-step-tab {
+    gap: calc(4px * var(--app-zoom));
+    font-size: calc(11px * var(--app-zoom));
+  }
+
+  .workflow-step-number {
+    display: none;
+  }
+
+  .workflow-top-utilities {
+    justify-content: space-between;
+  }
+
+  .workflow-version {
+    margin-left: auto;
+  }
+}
+
+
+.four-step-app .report-export-section {
+  position: static;
+  width: auto;
+}
+
+.four-step-app .report-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(16px * var(--app-zoom));
+}
+
+.four-step-app .report-section-heading > div:first-child {
+  min-width: 0;
+}
+
+.four-step-app .report-export-section h2,
+.four-step-app .report-export-section p {
+  margin-top: 0;
+}
+
+.four-step-app .report-export-section .report-export-actions-grid {
+  display: flex;
+  flex: 0 0 auto;
+  gap: calc(8px * var(--app-zoom));
+}
+
+@media (max-width: 720px) {
+  .four-step-app .report-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid {
+    width: 100%;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid button {
+    flex: 1 1 0;
+  }
+}
