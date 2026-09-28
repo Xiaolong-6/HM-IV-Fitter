@@ -38,7 +38,7 @@ export function PlotWorkspace({ traces, selectedTraceId, onSelectTrace, onImport
     <h2>{t(language, "plots")}</h2>
     <div className="empty-plot-state">
       <div className="warning info">{t(language, "noPlotData")}</div>
-      {onImportData ? <button type="button" className="primary import-primary-empty" disabled={disabled} onClick={onImportData}>{language === "zh" ? "导入数据" : "Import data"}</button> : null}
+      {onImportData ? <button type="button" className="primary import-primary-empty" disabled={disabled} onClick={onImportData}>{"Import data"}</button> : null}
     </div>
   </section>;
   const selected = traces.find((tr) => tr.trace_id === selectedTraceId) ?? traces[0];
@@ -62,8 +62,8 @@ export function PlotWorkspace({ traces, selectedTraceId, onSelectTrace, onImport
           {traces.map((trace) => <option value={trace.trace_id} key={trace.trace_id}>{trace.trace_id}</option>)}
         </select></label>
         <label className="inline-select"><span>{t(language, "plotView")}</span><select value={view} onChange={(e) => setView(e.target.value as PlotId)}>
-          <option value="linearResidual">{language === "zh" ? "线性 I-V + 残差" : "Linear I-V + signed residual"}</option>
-          <option value="logResidualPair">{language === "zh" ? "Log |I| + Log 残差" : "Log |I| + log residual"}</option>
+          <option value="linearResidual">{"Linear I-V + signed residual"}</option>
+          <option value="logResidualPair">{"Log |I| + log residual"}</option>
           <option value="linear">{t(language, "linear")}</option>
           <option value="log">{t(language, "log")}</option>
           <option value="residual">{t(language, "residual")}</option>
