@@ -366,8 +366,8 @@ export function componentPhysicalRole(comp: ComponentSpec, language: Language): 
  */
 export function componentZoneLabel(comp: ComponentSpec, language: Language): string {
   const z = zone(comp);
-  if (z === "main") return language === "zh" ? "主路" : "Main path";
-  return language === "zh" ? "支路" : "Branch";
+  if (z === "main") return "Main path";
+  return "Branch";
 }
 
 /**
@@ -561,7 +561,7 @@ export function componentPlainRoleText(
   comp: ComponentSpec,
   language: Language,
 ): string {
-  return componentPhysicalRole(comp, language)[language === "zh" ? "zh" : "en"];
+  return componentPhysicalRole(comp, language)["en"];
 }
 
 /**
@@ -576,38 +576,24 @@ export function softplusDefinitionLatex(): string {
  */
 export function beginnerBranchMeaning(comp: ComponentSpec, language: Language): string {
   if (isDiode(comp)) {
-    return language === "zh"
-      ? "指数型二极管电流，在结点电压下求值。"
-      : "Exponential diode-like current evaluated at the junction voltage.";
+    return "Exponential diode-like current evaluated at the junction voltage.";
   }
   if (isOhmic(comp)) {
-    return language === "zh"
-      ? "线性漏电路径：Vj 越高，漏电流越大。"
-      : "Linear leakage path: higher Vj gives proportionally higher leakage current.";
+    return "Linear leakage path: higher Vj gives proportionally higher leakage current.";
   }
   if (isPhotocurrent(comp)) {
-    return language === "zh"
-      ? "光生电流，幅值近似恒定。"
-      : "Light-generated current with nearly constant magnitude.";
+    return "Light-generated current with nearly constant magnitude.";
   }
   if (isBiasDependent(comp)) {
-    return language === "zh"
-      ? "经验支路电流，幅值可随偏压变化。"
-      : "Empirical branch current whose magnitude can change with bias.";
+    return "Empirical branch current whose magnitude can change with bias.";
   }
   if (isForwardPower(comp)) {
-    return language === "zh"
-      ? "额外经验电流，在阈值附近缓慢开启。"
-      : "Extra empirical current that turns on softly near a threshold.";
+    return "Extra empirical current that turns on softly near a threshold.";
   }
   if (isBreakdown(comp)) {
-    return language === "zh"
-      ? "反向偏置漏电或软击穿贡献。"
-      : "Reverse-bias leakage or soft breakdown contribution.";
+    return "Reverse-bias leakage or soft breakdown contribution.";
   }
-  return language === "zh"
-    ? "此支路为总电流贡献一个电流项。"
-    : "This branch contributes one current term to the terminal current.";
+  return "This branch contributes one current term to the terminal current.";
 }
 
 // ---------------------------------------------------------------------------
