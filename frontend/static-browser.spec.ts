@@ -112,6 +112,27 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
       },
     });
 
+    const failedModel = structuredClone(model);
+    failedModel.parallel[0].params.Rsh_ohm.value = 0;
+    failedModel.parallel[0].params.Rsh_ohm.lower = 1;
+    const failedFit = await call<{
+      success: boolean;
+      warnings: Array<{ code: string; severity: string }>;
+    }>("fit", {
+      trace: imported.traces[0].trace,
+      model: failedModel,
+      config: {
+        weighting: "linear",
+        loss: "linear",
+        fit_speed: "standard",
+        exclude_compliance: false,
+        max_nfev: 20,
+        multistart_enabled: false,
+        run_timeout_s: 5,
+        solver_mode: "legacy_composite",
+      },
+    });
+
     const report = await call<{ markdown: string }>("export_report", fit);
     const reportCsv = await call<{ text: string }>("export_report_csv", fit);
 
@@ -126,6 +147,9 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
           warning.severity === "error",
       ),
       fitSuccess: fit.success,
+      failedFitRejected: !failedFit.success && failedFit.warnings.some(
+        (warning) => warning.severity === "error",
+      ),
       fittedResistance: fit.parameters["Rsh.Rsh_ohm"]?.value,
       fittedPoints: fit.curves.current_fit_A.length,
       reportHeading: report.markdown.includes("# IV-fitter Web report"),
@@ -137,6 +161,7 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
   expect(result.importedPoints).toBe(5);
   expect(result.invalidModelRejected).toBe(true);
   expect(result.fitSuccess).toBe(true);
+  expect(result.failedFitRejected).toBe(true);
   expect(Math.abs((result.fittedResistance ?? 0) - 1000)).toBeLessThan(0.1);
   expect(result.fittedPoints).toBe(5);
   expect(result.reportHeading).toBe(true);
@@ -289,6 +314,74 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toBeVisible();
   await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+});
+
+test("successful synthetic fit exports reports and model changes invalidate it", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto("http://127.0.0.1:4173/");
+
+  const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
+  await workflow.getByRole("button", { name: "2 Model builder" }).click();
+  await expect(page.locator(".mbv3-direct-page")).toBeVisible();
+
+  await page.getByRole("button", { name: "Model presets" }).click();
+  await page.getByText("Single diode model", { exact: true }).click();
+  const useModel = page.getByRole("button", { name: "Use model for fitting" });
+  await expect(useModel).toBeEnabled();
+
+  await page.getByRole("button", { name: "Simulate IV" }).click();
+  await expect(page.getByText("Synthetic IV", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Generate and import" }).click();
+  await expect(page.getByText("Synthetic trace generated and imported.")).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.getByRole("button", { name: "Simulate IV" }).click();
+
+  await useModel.click();
+  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+
+  await page.getByRole("button", { name: "Advanced" }).click();
+  await page.getByLabel("Assembly/solver mode").selectOption("legacy_composite");
+  const timeoutInput = page.getByLabel("Run timeout (s)");
+  await timeoutInput.fill("20");
+  await timeoutInput.press("Enter");
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Run fit" }).click();
+  await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
+    timeout: 60_000,
+  });
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
+  await expect(page.locator(".scientific-report-page")).toBeVisible();
+
+  const htmlButton = page.getByRole("button", { name: /Download .*HTML/ });
+  const csvButton = page.getByRole("button", { name: /Download .*CSV/ });
+  await expect(htmlButton).toBeEnabled();
+  await expect(csvButton).toBeEnabled();
+
+  const [htmlDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    htmlButton.click(),
+  ]);
+  expect(htmlDownload.suggestedFilename()).toMatch(/\.html$/);
+
+  const [csvDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    csvButton.click(),
+  ]);
+  expect(csvDownload.suggestedFilename()).toMatch(/\.csv$/);
+
+  await workflow.getByRole("button", { name: "2 Model builder" }).click();
+  await page.getByRole("button", { name: "Model presets" }).click();
+  await page.getByText("Two diode model", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Use model for fitting" })).toBeEnabled();
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Download .*HTML/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Download .*CSV/ })).toHaveCount(0);
 });
 
 test("four-step navigation remains usable on a narrow viewport", async ({ page }) => {
