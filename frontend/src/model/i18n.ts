@@ -141,7 +141,8 @@ const dictionary = {
     maxEvalsHelp: "Maximum solver evaluations before stopping.",
     excludePlateausHelp: "Exclude likely high-current plateaus or outliers before fitting. Review warnings before reporting.",
     multistartHelp: "Try several scaled starting points to reduce sensitivity to one poor initial guess.",
-    solverModeHelp: "Legacy composite is stable for common one-junction models. Graph DC is experimental for topology-based assembly.", as const;
+    solverModeHelp: "Legacy composite is stable for common one-junction models. Graph DC is experimental for topology-based assembly.",
+} as const;
 
 export type TranslationKey = keyof typeof dictionary;
 
