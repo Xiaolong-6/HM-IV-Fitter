@@ -1,5 +1,3 @@
-import pytest
-
 from ivfitter.core import fitting_engine
 from ivfitter.core.model_spec import (
     ComponentSpec,
@@ -40,16 +38,25 @@ def test_fit_trace_rejects_invalid_model_before_solver(monkeypatch):
         should_not_run,
     )
 
-    with pytest.raises(ValueError, match="Model validation failed") as exc:
-        fitting_engine.fit_trace(
-            FitRequest(
-                trace=trace,
-                model=model,
-                config=FitConfig(exclude_compliance=False),
-            )
+    result = fitting_engine.fit_trace(
+        FitRequest(
+            trace=trace,
+            model=model,
+            config=FitConfig(exclude_compliance=False),
         )
+    )
 
-    assert "custom_invalid_expression" in str(exc.value)
+    assert result.success is False
+    assert result.reportable is False
+    assert result.fit_diagnostics is not None
+    assert result.fit_diagnostics.solver_name == "validation_gate"
+    assert result.fit_diagnostics.function_evaluations == 0
+    assert result.curves.current_fit_A == []
+    assert any(
+        warning.code == "custom_invalid_expression"
+        and warning.severity == "error"
+        for warning in result.warnings
+    )
 
 
 def test_fit_trace_still_accepts_validation_warnings_without_errors():
