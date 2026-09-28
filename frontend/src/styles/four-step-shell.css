@@ -273,3 +273,46 @@
     margin-left: auto;
   }
 }
+
+
+.four-step-app .report-export-section {
+  position: static;
+  width: auto;
+}
+
+.four-step-app .report-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(16px * var(--app-zoom));
+}
+
+.four-step-app .report-section-heading > div:first-child {
+  min-width: 0;
+}
+
+.four-step-app .report-export-section h2,
+.four-step-app .report-export-section p {
+  margin-top: 0;
+}
+
+.four-step-app .report-export-section .report-export-actions-grid {
+  display: flex;
+  flex: 0 0 auto;
+  gap: calc(8px * var(--app-zoom));
+}
+
+@media (max-width: 720px) {
+  .four-step-app .report-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid {
+    width: 100%;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid button {
+    flex: 1 1 0;
+  }
+}
