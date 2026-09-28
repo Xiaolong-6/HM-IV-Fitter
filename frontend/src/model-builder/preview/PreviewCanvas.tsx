@@ -440,7 +440,7 @@ export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticToo
 
   return (
     <div ref={shellRef} className="mb-preview-shell" onPointerDownCapture={hideFloatingMenus}>
-      <iframe ref={frameRef} className="mb-preview-frame" src={previewUrl} title="Model Builder canvas" onLoad={handleFrameLoad} />
+      <iframe ref={frameRef} className="mb-preview-frame" src={previewUrl} aria-label="Model Builder canvas" onLoad={handleFrameLoad} />
       <div className="mb-preview-overlay" aria-label="Model Builder overlay">
         <PreviewToolbar
           circuitStatus={effectiveCircuitStatus}
