@@ -136,5 +136,6 @@ test("static UI imports the bundled HappyMeasure sample through browser mode", a
   await expect(
     page.getByText(/Sample HappyMeasure data loaded\. \(14 traces\)/),
   ).toBeVisible({ timeout: 180_000 });
-  await expect(page.getByText(/14 traces ·/)).toBeVisible();
+  const importSummary = page.getByRole("region", { name: "Import summary" });
+  await expect(importSummary.getByText(/14 traces · 1330 points/)).toBeVisible();
 });
