@@ -428,6 +428,13 @@ export function FittingPage() {
       );
     }, timeoutS * 1000);
     try {
+      // Allow the running state and Stop control to paint before dispatching
+      // validation/solver work to the numerical Worker. This makes cancellation
+      // deterministic even for fits that finish very quickly.
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+      if (controller.signal.aborted) throw new DOMException("Operation aborted.", "AbortError");
       const validationWarnings = await validateModel(modelBeforeFit, controller.signal);
       if (
         !shouldAcceptRunResult({
