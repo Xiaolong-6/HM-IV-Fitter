@@ -314,6 +314,13 @@ def fit_trace(request: FitRequest) -> FitResult:
     request = copy.deepcopy(request)
     fit_started_at = time.monotonic()
     warnings: list[FitWarning] = validate_model_spec(request.model)
+    validation_errors = [warning for warning in warnings if warning.severity == "error"]
+    if validation_errors:
+        details = "; ".join(
+            f"{warning.code}: {warning.message}"
+            for warning in validation_errors
+        )
+        raise ValueError(f"Model validation failed: {details}")
     warnings.extend(deprecated_config_warnings(request.config))
     timeout_s = float(getattr(request.config, "run_timeout_s", 60.0) or 0.0)
     deadline = time.monotonic() + timeout_s if timeout_s > 0 else None
