@@ -17,6 +17,7 @@ concurrency:
 
 jobs:
   static-browser:
+    name: static-browser
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -36,13 +37,12 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt pytest httpx
 
-      - name: Run Python tests
+      - name: Run Python regression and bridge tests
         env:
           PYTHONPATH: backend
         run: |
           # Main currently contains one stale CSS-ownership test that references
-          # model-builder.css/shell.css files removed before this branch. Keep
-          # that unrelated baseline debt from masking static-runtime regressions.
+          # model-builder.css/shell.css files already absent from main.
           python -m pytest backend/tests -q -k "not test_css_model_builder_owns_styles_without_legacy_shell"
           python -m compileall -q backend/ivfitter backend/tests
 
@@ -50,21 +50,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-          cache: npm
-          cache-dependency-path: |
-            package-lock.json
-            frontend/package-lock.json
 
       - name: Install Node dependencies
         run: |
           # Both lockfiles are already stale on main relative to package.json.
-          # Use normal install in this prototype gate so pre-existing lock drift
-          # does not prevent validating the static runtime itself.
           npm install --no-audit --no-fund
           npm install --prefix frontend --no-audit --no-fund
-
-      - name: Run frontend tests
-        run: npm --prefix frontend run test -- --run --reporter=dot
 
       - name: Build static browser app
         run: npm run build:static
@@ -115,3 +106,34 @@ jobs:
           done
           cd frontend
           npx playwright test static-browser.spec.ts --reporter=line --workers=1
+
+      - name: Upload tested static site
+        uses: actions/upload-artifact@v4
+        with:
+          name: hm-iv-fitter-static-${{ github.sha }}
+          path: frontend/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  frontend-regression:
+    name: frontend-regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install frontend dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npm install --prefix frontend --no-audit --no-fund
+
+      - name: Run frontend unit tests
+        timeout-minutes: 4
+        run: npm --prefix frontend run test -- --reporter=dot
