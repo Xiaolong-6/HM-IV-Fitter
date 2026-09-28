@@ -146,3 +146,88 @@ def test_graph_rejects_dangling_component_node_reference():
     )
 
     assert "graph_unknown_node" in error_codes(graph_model(component))
+
+
+def test_graph_builtin_resistance_rejects_zero_ohm_singularity():
+    component = GraphComponent(
+        id="R1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"R": p(0.0, 0.0, 1e9, unit="ohm")},
+        metadata={
+            "behavior": "R_of_V",
+            "expression": "R",
+            "templateKey": "resistance",
+        },
+    )
+
+    assert "graph_nonpositive_resistance" in error_codes(graph_model(component))
+
+
+def test_graph_components_must_share_model_temperature():
+    d1 = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(300.0, 250.0, 380.0, fit=False),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+    d2 = d1.model_copy(deep=True)
+    d2.id = "D2"
+    d2.params["T"].value = 320.0
+
+    model = ModelSpec(
+        graph=GraphSpec(
+            terminals=["V"],
+            reference_node="GND",
+            nodes=[
+                GraphNode(id="V", role="terminal"),
+                GraphNode(id="GND", role="reference"),
+            ],
+            components=[d1, d2],
+            schema_version="model_builder",
+        ),
+        temperature_K=300.0,
+    )
+
+    assert "graph_inconsistent_temperature" in error_codes(model)
+
+
+def test_graph_temperature_must_match_model_temperature():
+    component = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(320.0, 250.0, 380.0, fit=False),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+    model = graph_model(component)
+    model.temperature_K = 300.0
+
+    assert "graph_temperature_mismatch" in error_codes(model)
