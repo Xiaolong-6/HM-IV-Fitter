@@ -737,6 +737,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
   const rootForPort = (ref: Mb3PortRef) => dsu.find(portKey(ref));
   const positiveRoot = dsu.find(`node:${graph.terminals.positive}`);
   const groundRoot = dsu.find(`node:${graph.terminals.ground}`);
+  const errors: string[] = [];
   const warnings: string[] = [];
   const componentAdjacency = new Map<string, Set<string>>();
 
@@ -803,7 +804,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
       })
     : [];
 
-  warnings.push(...componentContractWarnings(activeComponents));
+  errors.push(...componentContractWarnings(activeComponents));
 
   const openComponents = graph.components.filter((component) => {
     const hasPositiveWire = graph.wires.some((wire) =>
@@ -960,6 +961,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
     activeComponentIds: activeComponents.map((component) => component.id),
     activeWireIds,
     model,
+    errors,
     warnings,
     formulaLatex,
     formulaSections,
