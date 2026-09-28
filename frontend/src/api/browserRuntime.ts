@@ -92,6 +92,7 @@ function ensureWorker(): Worker {
       });
       return;
     }
+    if (!("id" in message)) return;
 
     const request = pending.get(message.id);
     if (!request) return;
