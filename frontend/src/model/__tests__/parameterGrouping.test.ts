@@ -3,8 +3,10 @@ import type { FitResult, ModelSpec } from "../types";
 import {
   buildParameterRows,
   componentLawFormPlacement,
+  fittedParameterForModelParameter,
   groupParameterRows,
   placementGroupForComponent,
+  seedModelFromFittedValues,
 } from "../parameterGrouping";
 
 function model(): ModelSpec {
@@ -44,5 +46,184 @@ describe("parameter grouping", () => {
     expect(main.groups[0].totalCount).toBe(1);
     expect(junction.groups[0].fittedCount).toBe(1);
     expect(junction.groups[0].totalCount).toBe(2);
+  });
+});
+
+
+function graphBackedModel(): ModelSpec {
+  const graph = {
+    version: 3 as const,
+    terminals: { positive: "V", ground: "GND" },
+    nodes: [
+      { id: "V", kind: "terminal" as const, label: "V", role: "positive" as const, position: { x: 0, y: 0 } },
+      { id: "GND", kind: "terminal" as const, label: "GND", role: "ground" as const, position: { x: 0, y: 1 } },
+    ],
+    components: [
+      {
+        id: "Rs",
+        label: "Rs",
+        templateKey: "resistance",
+        behavior: "R_of_V" as const,
+        expression: "R",
+        position: { x: 0, y: 0.5 },
+        sign: 1 as const,
+        parameters: [
+          { symbol: "R", value: 10, lower: 1e-12, upper: 1e9, fit: true, unit: "ohm" },
+        ],
+      },
+    ],
+    wires: [],
+  };
+  return {
+    core: [],
+    series: [{
+      id: "Rs",
+      location: "series",
+      function_type: "constant_rs",
+      law_id: "ohmic",
+      evaluation_form: "voltage_drop",
+      placement: "series_voltage_drop",
+      params: {
+        Rs_ohm: {
+          value: 10,
+          lower: 1e-12,
+          upper: 1e9,
+          fit: true,
+          unit: "ohm",
+          label: "R",
+        },
+      },
+    }],
+    parallel: [],
+    graph: {
+      terminals: ["V"],
+      reference_node: "GND",
+      nodes: [
+        { id: "V", role: "terminal" },
+        { id: "GND", role: "reference" },
+      ],
+      components: [{
+        id: "Rs",
+        function_type: "custom",
+        law_id: "custom_expression",
+        evaluation_form: "current_branch",
+        placement: "parallel_current_branch",
+        node_pos: "V",
+        node_neg: "GND",
+        params: {
+          R: {
+            value: 10,
+            lower: 1e-12,
+            upper: 1e9,
+            fit: true,
+            unit: "ohm",
+            label: "R",
+          },
+        },
+        metadata: { behavior: "R_of_V", expression: "R", templateKey: "resistance" },
+      }],
+      assembly_notes: [],
+      schema_version: "model_builder",
+      metadata: { modelBuilder: graph },
+    },
+    temperature_K: 300,
+    version: "graph-test",
+  };
+}
+
+function graphResult(
+  source: ModelSpec,
+  parameters: FitResult["parameters"],
+): FitResult {
+  return {
+    success: true,
+    reportable: true,
+    message: "ok",
+    model: structuredClone(source),
+    config: {
+      weighting: "linear",
+      loss: "linear",
+      fit_speed: "standard",
+      exclude_compliance: false,
+      max_nfev: 10,
+      solver_mode: "graph_dc",
+    },
+    parameters,
+    metrics: {},
+    warnings: [],
+    curves: {
+      voltage_V: [],
+      current_measured_A: [],
+      current_fit_A: [],
+      residual_A: [],
+    },
+    equations: {
+      title: "",
+      voltage_relation: [],
+      core: [],
+      series: [],
+      parallel: [],
+      auxiliary: [],
+    },
+    software_version: "test",
+  };
+}
+
+describe("graph fitted-value promotion", () => {
+  it("resolves graph result keys for legacy parameter rows", () => {
+    const source = graphBackedModel();
+    const fit = graphResult(source, {
+      "Rs.R": {
+        value: 120,
+        fixed: false,
+        lower: 1e-12,
+        upper: 1e9,
+        unit: "ohm",
+      },
+    });
+
+    expect(
+      fittedParameterForModelParameter(source, fit, "Rs", "Rs_ohm")?.value,
+    ).toBe(120);
+  });
+
+  it("promotes graph_dc values into graph, legacy, and Model Builder metadata", () => {
+    const source = graphBackedModel();
+    const fit = graphResult(source, {
+      "Rs.R": {
+        value: 120,
+        fixed: false,
+        lower: 1e-12,
+        upper: 1e9,
+        unit: "ohm",
+      },
+    });
+
+    const promoted = seedModelFromFittedValues(source, fit);
+    expect(promoted.series[0].params.Rs_ohm.value).toBe(120);
+    expect(promoted.graph?.components[0].params.R.value).toBe(120);
+
+    const mb = promoted.graph?.metadata?.modelBuilder as {
+      components: Array<{ parameters: Array<{ symbol: string; value: number }> }>;
+    };
+    expect(mb.components[0].parameters[0].value).toBe(120);
+  });
+
+  it("promotes legacy solver values back into the graph projection", () => {
+    const source = graphBackedModel();
+    const fit = graphResult(source, {
+      "Rs.Rs_ohm": {
+        value: 75,
+        fixed: false,
+        lower: 1e-12,
+        upper: 1e9,
+        unit: "ohm",
+      },
+    });
+    fit.config.solver_mode = "legacy_composite";
+
+    const promoted = seedModelFromFittedValues(source, fit);
+    expect(promoted.series[0].params.Rs_ohm.value).toBe(75);
+    expect(promoted.graph?.components[0].params.R.value).toBe(75);
   });
 });
