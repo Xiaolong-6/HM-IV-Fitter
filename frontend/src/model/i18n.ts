@@ -48,7 +48,6 @@ const dictionary = {
     terminalMinus: "terminal−",
     language: "Language",
     english: "English",
-    chinese: "中文",
     version: "Version",
     markdownReport: "Markdown report",
     direct: "direct",
