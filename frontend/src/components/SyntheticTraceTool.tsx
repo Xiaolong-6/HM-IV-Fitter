@@ -198,7 +198,7 @@ export function SyntheticTraceTool({
           <div>
             <h2 id="synthetic-trace-title">Synthetic IV trace</h2>
           </div>
-          <button onClick={() => setOpen(false)} disabled={busy}>{language === "zh" ? "Close" : "Close"}</button>
+          <button onClick={() => setOpen(false)} disabled={busy}>{"Close"}</button>
         </div>
         {formContent}
       </div>
