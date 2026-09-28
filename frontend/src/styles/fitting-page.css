@@ -1511,7 +1511,21 @@
 .compact-fit-setup-panel .fit-bottom-voltage { margin: 0; }
 .compact-fit-setup-panel .fit-bottom-voltage-title { display: none; }
 .compact-fit-setup-panel .fit-bottom-voltage-grid { display: grid; grid-template-columns: repeat(2, minmax(88px, 1fr)); gap: calc(6px * var(--app-zoom)); }
-.compact-fit-setup-panel .fit-config-message-stack { display: none; }
+.compact-fit-setup-panel .fit-config-message-stack {
+  display: grid;
+  gap: calc(3px * var(--app-zoom));
+  min-width: 0;
+}
+.compact-fit-setup-panel .fit-config-message-stack:empty {
+  display: none;
+}
+.compact-fit-setup-panel .fit-primary-message {
+  margin: 0;
+  padding: calc(4px * var(--app-zoom)) calc(7px * var(--app-zoom));
+  border-radius: calc(7px * var(--app-zoom));
+  font-size: calc(11px * var(--app-zoom));
+  line-height: 1.25;
+}
 .fit-advanced-popover-button {
   border: 1px solid var(--theme-border);
   background: #f8fafc;
