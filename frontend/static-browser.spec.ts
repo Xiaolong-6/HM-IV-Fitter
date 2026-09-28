@@ -203,13 +203,24 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   const importSummary = page.getByRole("region", { name: "Import summary" });
   await expect(importSummary.getByText(/14 traces · 1330 points/)).toBeVisible();
 
+  const importRail = page.locator(".data-import-layout > .import-loaded-bar");
+  const importMain = page.locator(".data-import-layout > .trace-control-card");
+  await expect(importRail).toBeVisible();
+  await expect(importMain).toBeVisible();
+  const importRailBox = await importRail.boundingBox();
+  const importMainBox = await importMain.boundingBox();
+  expect(importRailBox).not.toBeNull();
+  expect(importMainBox).not.toBeNull();
+  expect(importRailBox!.x + importRailBox!.width).toBeLessThan(importMainBox!.x);
+  expect(importRailBox!.width).toBeLessThan(importMainBox!.width);
+
   await page.screenshot({
     path: "test-results/four-step-import.png",
     fullPage: true,
   });
 
   await workflow.getByRole("button", { name: "3 Fit" }).click();
-  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  await expect(page.locator(".fitting-page-two-column")).toBeVisible();
   const emptyRunFit = page.getByRole("button", { name: "Run fit" });
   await expect(emptyRunFit).toBeDisabled();
   await expect(page.getByText("No runnable model.")).toBeVisible();
@@ -226,11 +237,37 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   });
   await useModel.click();
 
-  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
-  const runFit = page.getByRole("button", { name: "Run fit" });
+  await expect(page.locator(".fitting-page-two-column")).toBeVisible();
+  const fitSidebar = page.locator(".fit-setup-sidebar");
+  const fitMain = page.locator(".fitting-analysis-main");
+  await expect(fitSidebar).toBeVisible();
+  await expect(fitMain).toBeVisible();
+  const fitSidebarBox = await fitSidebar.boundingBox();
+  const fitMainBox = await fitMain.boundingBox();
+  expect(fitSidebarBox).not.toBeNull();
+  expect(fitMainBox).not.toBeNull();
+  expect(fitSidebarBox!.x + fitSidebarBox!.width).toBeLessThan(fitMainBox!.x);
+  expect(fitSidebarBox!.width).toBeLessThan(fitMainBox!.width);
+
+  await expect(fitSidebar.getByLabel("V min")).toBeVisible();
+  await expect(fitSidebar.getByLabel("V max")).toBeVisible();
+  await expect(fitSidebar.getByRole("heading", { name: "Advanced" })).toBeVisible();
+  await expect(fitSidebar.getByRole("button", { name: "Advanced" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: /Advanced/ })).toHaveCount(0);
+
+  const runFit = fitSidebar.getByRole("button", { name: "Run fit" });
   await expect(runFit).toBeEnabled();
+  await expect(fitSidebar.getByRole("button", { name: "Report →" })).toBeVisible();
+  await expect(fitSidebar.getByText("Ready", { exact: true })).toBeVisible();
   await expect(page.locator(".plot-grid.single-plot")).toBeVisible();
   await expect(page.locator(".plot-grid.paired-plot")).toHaveCount(0);
+  const plotSectionBox = await page.locator(".plots-section").boundingBox();
+  const parameterSectionBox = await page.locator(".parameters-section").boundingBox();
+  expect(plotSectionBox).not.toBeNull();
+  expect(parameterSectionBox).not.toBeNull();
+  expect(plotSectionBox!.y + plotSectionBox!.height).toBeLessThanOrEqual(
+    parameterSectionBox!.y + 1,
+  );
   await page.screenshot({
     path: "test-results/four-step-fit.png",
     fullPage: true,
@@ -282,14 +319,12 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
   await expect(page.getByText(/Cancelled ·/)).toBeVisible();
 
-  await page.getByRole("button", { name: "Advanced" }).click();
-  await page
+  await fitSidebar
     .getByLabel("Assembly/solver mode")
     .selectOption("legacy_composite");
-  const timeoutInput = page.getByLabel("Run timeout (s)");
+  const timeoutInput = fitSidebar.getByLabel("Run timeout (s)");
   await timeoutInput.fill("3");
   await timeoutInput.press("Enter");
-  await page.getByRole("button", { name: "Close" }).click();
 
   await page.getByRole("button", { name: "Run fit" }).click();
   const terminalStatus = page.locator(".fit-status-compact");
@@ -415,14 +450,13 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await page.getByRole("button", { name: "Simulate IV" }).click();
 
   await useModel.click();
-  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  await expect(page.locator(".fitting-page-two-column")).toBeVisible();
 
-  await page.getByRole("button", { name: "Advanced" }).click();
-  await page.getByLabel("Assembly/solver mode").selectOption("graph_dc");
-  const timeoutInput = page.getByLabel("Run timeout (s)");
+  const fitSidebar = page.locator(".fit-setup-sidebar");
+  await fitSidebar.getByLabel("Assembly/solver mode").selectOption("graph_dc");
+  const timeoutInput = fitSidebar.getByLabel("Run timeout (s)");
   await timeoutInput.fill("20");
   await timeoutInput.press("Enter");
-  await page.getByRole("button", { name: "Close" }).click();
 
   await page.getByRole("button", { name: "Run fit" }).click();
   await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({

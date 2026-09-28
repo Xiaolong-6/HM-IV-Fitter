@@ -11,7 +11,7 @@ import type { WorkflowStep } from "../../components/WorkflowTopNav";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { ModelBuilder } from "../../components/ModelBuilder";
 import { EquationPreview } from "../../components/EquationPreview";
-import { FitConfigPanel, type FitDrawerMode } from "../../components/FitConfigPanel";
+import { FitConfigPanel } from "../../components/FitConfigPanel";
 import { PlotWorkspace } from "../../components/PlotWorkspace";
 import { ParameterTable } from "../../components/ParameterTable";
 import { t, type Language } from "../../model/i18n";
@@ -111,7 +111,6 @@ export function ModelWorkflowPage({
 }
 
 export function FittingWorkflowPage({
-  selectedTrace,
   selectedTraceId,
   traces,
   setSelectedTraceId,
@@ -119,8 +118,6 @@ export function FittingWorkflowPage({
   config,
   setConfig,
   autoVoltageRange,
-  fitDrawerMode,
-  setFitDrawerMode,
   fitActions,
   fitStatus,
   fitMessages,
@@ -130,12 +127,7 @@ export function FittingWorkflowPage({
   updateParameterModel,
   isFitting,
   language,
-  leftPct,
-  plotPct,
-  onResizeStart,
-  onPlotResizeStart,
 }: {
-  selectedTrace: TraceData;
   selectedTraceId: string | null;
   traces: TraceData[];
   setSelectedTraceId: (id: string) => void;
@@ -143,8 +135,6 @@ export function FittingWorkflowPage({
   config: FitConfig;
   setConfig: (config: FitConfig) => void;
   autoVoltageRange: { vMin: number | null; vMax: number | null };
-  fitDrawerMode: FitDrawerMode;
-  setFitDrawerMode: (mode: FitDrawerMode) => void;
   fitActions: ReactNode;
   fitStatus: ReactNode;
   fitMessages: ReactNode;
@@ -154,41 +144,25 @@ export function FittingWorkflowPage({
   updateParameterModel: (model: ModelSpec) => void;
   isFitting: boolean;
   language: Language;
-  leftPct: number;
-  plotPct: number;
-  onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
-  onPlotResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }) {
-  void leftPct;
-  void plotPct;
-  void onResizeStart;
-  void onPlotResizeStart;
-  void fitDrawerMode;
-  void setFitDrawerMode;
-  const hasTrace = selectedTrace.voltage_V.length > 0;
-  void hasTrace;
-  void setActiveView;
   return (
-    <section className="workflow-page fitting-page fitting-page-one-column">
-      <div className="fitting-webpage-stack">
-        <div className="fit-setup-sticky">
-          <ErrorBoundary label="Fit config panel">
-            <FitConfigPanel
-              config={config}
-              onChange={setConfig}
-              language={language}
-              disabled={isFitting}
-              drawerMode={fitDrawerMode}
-              onDrawerModeChange={setFitDrawerMode}
-              autoVoltageRange={autoVoltageRange}
-              actionDock={<div className="fit-action-row">{fitActions}</div>}
-              statusDock={fitStatus}
-              messageDock={fitMessages}
-              detailsDock={null}
-              hasDetails={false}
-            />
-          </ErrorBoundary>
-        </div>
+    <section className="workflow-page fitting-page fitting-page-two-column">
+      <aside className="fit-setup-sidebar" aria-label={t(language, "fitSetup")}>
+        <ErrorBoundary label="Fit config panel">
+          <FitConfigPanel
+            config={config}
+            onChange={setConfig}
+            language={language}
+            disabled={isFitting}
+            autoVoltageRange={autoVoltageRange}
+            actionDock={<div className="fit-action-row">{fitActions}</div>}
+            statusDock={fitStatus}
+            messageDock={fitMessages}
+          />
+        </ErrorBoundary>
+      </aside>
+
+      <div className="fitting-analysis-main">
         <PageSection title={t(language, "plots")} hideHeader className="plots-section">
           <ErrorBoundary label="Plot workspace">
             <PlotWorkspace
@@ -202,6 +176,7 @@ export function FittingWorkflowPage({
             />
           </ErrorBoundary>
         </PageSection>
+
         <PageSection title={t(language, "parameters")} hideHeader className="parameters-section">
           <ErrorBoundary label="Parameter table">
             <ParameterTable

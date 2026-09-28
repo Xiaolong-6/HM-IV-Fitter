@@ -659,6 +659,7 @@ export function DataImportWorkspace({
             className="import-loaded-bar webpage-panel"
             aria-label={"Import summary"}
           >
+            <div className="import-sidebar-title">Import data</div>
             <div className="import-loaded-summary">
               <span className="import-status-pill">
                 {"Loaded"}

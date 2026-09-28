@@ -8,7 +8,6 @@ import { seedModelFromFittedValues } from "../model/parameterGrouping";
 import { syncStoredCanvasParametersFromModel } from "../model-builder/preview/fittedCanvasPromotion";
 import { WorkflowTopNav } from "../components/WorkflowTopNav";
 import { FitStatusBar } from "../components/FitStatusBar";
-import { FitConfigPanel, type FitDrawerMode } from "../components/FitConfigPanel";
 import { SyntheticTraceTool } from "../components/SyntheticTraceTool";
 import { DataImportWorkspace } from "../components/DataImportWorkspace";
 import type { Language } from "../model/i18n";
@@ -55,7 +54,6 @@ type FittingPageState = {
   selectedTraceId: string | null;
   model: ModelSpec;
   config: FitConfig;
-  fitDrawerMode: FitDrawerMode;
   result: FitResult | null;
   error: string | null;
   fitPromotionNotice: string | null;
@@ -103,7 +101,6 @@ function createInitialFittingPageState(): FittingPageState {
     selectedTraceId: null,
     model: createInitialVisibleModel(APP_VERSION),
     config: initialConfig,
-    fitDrawerMode: "none",
     result: null,
     error: null,
     fitPromotionNotice: null,
@@ -146,7 +143,6 @@ export function FittingPage() {
     selectedTraceId,
     model,
     config,
-    fitDrawerMode,
     result,
     error,
     fitPromotionNotice,
@@ -172,7 +168,6 @@ export function FittingPage() {
   const setSelectedTraceId = (value: StateUpdater<string | null>) => setPageState("selectedTraceId", value);
   const setModel = (value: StateUpdater<ModelSpec>) => setPageState("model", value);
   const setConfig = (value: StateUpdater<FitConfig>) => setPageState("config", value);
-  const setFitDrawerMode = (value: StateUpdater<FitDrawerMode>) => setPageState("fitDrawerMode", value);
   const setResult = (value: StateUpdater<FitResult | null>) => setPageState("result", value);
   const setError = (value: StateUpdater<string | null>) => setPageState("error", value);
   const setFitPromotionNotice = (value: StateUpdater<string | null>) => setPageState("fitPromotionNotice", value);
@@ -251,12 +246,8 @@ export function FittingPage() {
     setActiveView,
     modelPanePct,
     setModelPanePct,
-    fittingPanePct,
-    setFittingPanePct,
     reportPanePct,
     setReportPanePct,
-    plotPanePct,
-    setPlotPanePct,
   } = useWorkflowLayoutState();
   const language = UI_LANGUAGE;
   const startPaneResize = usePaneResize();
@@ -766,7 +757,6 @@ export function FittingPage() {
           />
         ) : activeView === "fitting" ? (
           <FittingWorkflowPage
-            selectedTrace={selectedTrace}
             selectedTraceId={selectedTraceId}
             traces={traces}
             setSelectedTraceId={selectTrace}
@@ -774,8 +764,6 @@ export function FittingPage() {
             config={config}
             setConfig={setConfig}
             autoVoltageRange={autoVoltageRange}
-            fitDrawerMode={fitDrawerMode}
-            setFitDrawerMode={setFitDrawerMode}
             fitActions={fitActionsNode}
             fitStatus={fitStatusNode}
             fitMessages={fitMessagesNode}
@@ -785,14 +773,6 @@ export function FittingPage() {
             model={model}
             updateParameterModel={updateUserModel}
             isFitting={isFitting}
-            leftPct={fittingPanePct}
-            plotPct={plotPanePct}
-            onResizeStart={(event) =>
-              startPaneResize(event, setFittingPanePct, 22, 48)
-            }
-            onPlotResizeStart={(event) =>
-              startPaneResize(event, setPlotPanePct, 34, 76, "y")
-            }
           />
         ) : (
           <ReportWorkflowPage
