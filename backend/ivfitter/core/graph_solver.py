@@ -44,7 +44,13 @@ def _safe_scalar(value, fallback: float = float("nan")) -> float:
 def _eval_user_expr(comp: GraphComponent, v: float, i: float, temperature_K: float) -> float:
     expression = str((comp.metadata or {}).get("expression", "V / R0"))
     params = _param_dict(comp)
-    params.setdefault("Vt", 8.617333262145e-5 * temperature_K)
+    # Model Builder expressions use kB in eV/K so kB*T has units of volts
+    # inside voltage-domain Shockley equations. Keep the constant available in
+    # the safe expression environment instead of requiring users to serialize
+    # it as a fitted parameter.
+    params.setdefault("kB", 8.617333262145e-5)
+    params.setdefault("T", float(temperature_K))
+    params.setdefault("Vt", params["kB"] * float(temperature_K))
     params.setdefault("Vt_V", params["Vt"])
     params.setdefault("R0", params.get("Rs_ohm", params.get("Rsh_ohm", 1.0)))
     variables = {
