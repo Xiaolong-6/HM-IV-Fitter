@@ -151,4 +151,5 @@ jobs:
           npm --prefix frontend run test -- \
             src/model/__tests__ \
             src/model-builder/__tests__ \
+            src/api/__tests__ \
             --reporter=dot
