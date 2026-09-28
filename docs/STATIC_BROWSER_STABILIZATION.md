@@ -37,56 +37,56 @@ English is the only supported UI language in the static web application.
 
 ### P0 — UI shell cleanup
 
-- [ ] Center the four-step navigation.
-- [ ] Remove language selector.
-- [ ] Remove Chinese production strings/localization path.
-- [ ] Remove app-level zoom state and controls.
-- [ ] Remove top-bar version display.
+- [x] Center the four-step navigation.
+- [x] Remove language selector.
+- [x] Remove Chinese production strings/localization path.
+- [x] Remove app-level zoom state and controls.
+- [x] Remove top-bar version display.
 - [ ] Keep responsive navigation usable on narrow layouts.
 
 ### P0 — workflow state integrity
 
-- [ ] Importing/replacing traces invalidates stale fit/report state correctly.
-- [ ] Changing the selected trace invalidates stale fit/report state correctly.
-- [ ] Editing the model invalidates stale fit/report state correctly.
-- [ ] Fit cannot enter a misleading half-ready state when trace/model prerequisites are missing or invalid.
-- [ ] Report has one coherent empty state before a fit exists.
-- [ ] Success/warning/critical diagnostic banners only render when a real fit result exists.
-- [ ] Fit failure, cancellation, and timeout states remain distinguishable.
-- [ ] Navigation between Import data -> Model builder -> Fit -> Report never destroys valid current-session state.
+- [x] Importing/replacing traces invalidates stale fit/report state correctly.
+- [x] Changing the selected trace invalidates stale fit/report state correctly.
+- [x] Editing the model invalidates stale fit/report state correctly.
+- [x] Fit cannot enter a misleading half-ready state when trace/model prerequisites are missing or invalid.
+- [x] Report has one coherent empty state before a fit exists.
+- [x] Success/warning/critical diagnostic banners only render when a real fit result exists.
+- [x] Fit failure, cancellation, and timeout states remain distinguishable.
+- [x] Navigation between Import data -> Model builder -> Fit -> Report never destroys valid current-session state.
 
 ### P0 — browser runtime integrity
 
-- [ ] Initial Pyodide/runtime loading has an explicit pending state.
-- [ ] Runtime/bootstrap failure is surfaced as a user-actionable error.
-- [ ] Aborting a fit terminates the worker and the next request recreates it cleanly.
-- [ ] Stale worker responses cannot overwrite newer UI state.
-- [ ] Consecutive fits cannot create ambiguous overlapping requests.
+- [x] Initial Pyodide/runtime loading has an explicit pending state.
+- [x] Runtime/bootstrap failure is surfaced as a user-actionable error.
+- [x] Aborting a fit terminates the worker and the next request recreates it cleanly.
+- [x] Stale worker responses cannot overwrite newer UI state.
+- [x] Consecutive fits cannot create ambiguous overlapping requests.
 - [ ] Non-fit aborts do not unnecessarily destroy the runtime.
 
 ### P1 — real browser workflow coverage
 
-- [ ] Empty app state.
-- [ ] Bundled HappyMeasure sample import.
-- [ ] Generic CSV import.
+- [x] Empty app state.
+- [x] Bundled HappyMeasure sample import.
+- [x] Generic CSV import.
 - [ ] Model validation failure.
-- [ ] Successful ohmic fit.
+- [x] Successful ohmic fit.
 - [ ] Failed fit.
-- [ ] Stop/cancel then rerun.
+- [x] Stop/cancel then rerun.
 - [ ] Trace/model change after a successful fit invalidates Report.
 - [ ] Report CSV/HTML export from a valid fit.
-- [ ] Runtime bootstrap failure simulation.
+- [x] Runtime bootstrap failure simulation.
 
 ### P1 — layout review
 
-Review Chromium screenshots at representative desktop sizes for:
+Completed desktop Chromium screenshot review for:
 
 - Import data
 - Model builder
 - Fit
 - Report
 
-Check clipping, nested scrolling, dead space, contradictory statuses, disabled-action affordances, and stale-result presentation.
+Reviewed clipping, nested scrolling, dead space, contradictory statuses, disabled-action affordances, and stale-result presentation. The final stabilization pass also verified that the visible Model Builder graph is the fit source of truth: an empty canvas disables fitting, while loading a connected preset enables it.
 
 ## Scientific invariants
 
