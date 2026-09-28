@@ -139,6 +139,16 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await expect(workflow.getByRole("button", { name: "4 Report" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Help" })).toHaveCount(0);
+  await expect(page.locator(".workflow-top-utilities")).toHaveCount(0);
+  await expect(page.locator(".workflow-language-control")).toHaveCount(0);
+  await expect(page.locator(".workflow-zoom-control")).toHaveCount(0);
+  await expect(page.locator(".workflow-version")).toHaveCount(0);
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+  await expect(page.getByText("Warnings and diagnostics")).toHaveCount(0);
+  await workflow.getByRole("button", { name: "1 Import data" }).click();
 
   await page.getByRole("button", { name: "Sample data" }).click();
   await page.getByRole("button", { name: "Load sample data" }).click();
@@ -170,8 +180,46 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
 
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
   await page.screenshot({
     path: "test-results/four-step-report.png",
     fullPage: true,
   });
+
+  await workflow.getByRole("button", { name: "3 Fit" }).click();
+  const runFit = page.getByRole("button", { name: "Run fit" });
+  await expect(runFit).toBeEnabled();
+  await runFit.click();
+  await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
+    timeout: 120_000,
+  });
+
+  const traceSelect = page.locator(".plot-trace-select select");
+  await expect(traceSelect.locator("option")).toHaveCount(14);
+  const originalTrace = await traceSelect.inputValue();
+  const options = await traceSelect.locator("option").evaluateAll((nodes) =>
+    nodes.map((node) => (node as HTMLOptionElement).value),
+  );
+  const replacementTrace = options.find((value) => value !== originalTrace);
+  expect(replacementTrace).toBeTruthy();
+  await traceSelect.selectOption(replacementTrace!);
+
+  await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+});
+
+test("static UI reports browser runtime bootstrap failure and offers retry", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/pyodide/**", async (route) => {
+    await route.abort("failed");
+  });
+
+  await page.goto("http://127.0.0.1:4173/");
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Local fitting engine failed to start", {
+    timeout: 30_000,
+  });
+  await expect(alert.getByRole("button", { name: "Retry" })).toBeVisible();
 });
