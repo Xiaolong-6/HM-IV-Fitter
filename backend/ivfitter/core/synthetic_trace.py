@@ -112,7 +112,23 @@ def build_voltage_sweep(voltage_start: float, voltage_stop: float, voltage_step:
     return start + direction * step * np.arange(count, dtype=float)
 
 
+def _synthetic_solver_mode(model: ModelSpec) -> str:
+    graph = getattr(model, "graph", None)
+    if graph is not None and list(getattr(graph, "components", []) or []):
+        return "graph_dc"
+    return "legacy_composite"
+
+
 def _ground_truth_parameters(model: ModelSpec) -> dict[str, float]:
+    graph = getattr(model, "graph", None)
+    graph_components = list(getattr(graph, "components", []) or []) if graph is not None else []
+    if graph_components:
+        return {
+            f"{comp.id}.{name}": float(spec.value)
+            for comp in graph_components
+            for name, spec in comp.params.items()
+        }
+
     out: dict[str, float] = {}
     for group_name in ("core", "series", "parallel"):
         for comp in getattr(model, group_name):
@@ -160,7 +176,11 @@ def generate_synthetic_trace(
 ) -> SyntheticTraceResult:
     _validate_component_support(model)
     voltage = build_voltage_sweep(voltage_start, voltage_stop, voltage_step)
-    current = np.asarray(predict_current(voltage, model), dtype=float)
+    solver_mode = _synthetic_solver_mode(model)
+    current = np.asarray(
+        predict_current(voltage, model, solver_mode=solver_mode),
+        dtype=float,
+    )
     if current.shape != voltage.shape:
         raise ValueError("Synthetic model evaluation returned a current array with the wrong shape.")
     if not np.all(np.isfinite(current)):
@@ -177,6 +197,7 @@ def generate_synthetic_trace(
         "software_version": __version__,
         "model_snapshot": model.model_dump(mode="json"),
         "ground_truth_parameters": _ground_truth_parameters(model),
+        "solver_mode": solver_mode,
         "voltage_start": float(voltage_start),
         "voltage_stop": float(voltage_stop),
         "voltage_step": float(voltage_step),
