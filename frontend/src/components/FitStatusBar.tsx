@@ -65,48 +65,29 @@ function fmtMetric(value: number | null | undefined, unit = "") {
 }
 
 
-function metricHelp(key: string, language: Language) {
-  const zh = language === "zh";
-  const help: Record<string, [string, string]> = {
-    linear_rmse_A: [
+function metricHelp(key: string, _language: Language) {
+  const help: Record<string, string> = {
+    linear_rmse_A:
       "Root-mean-square current error in amperes. It is dominated by high-current regions and is best for absolute current error.",
-      "电流均方根误差，单位 A。它容易被大电流区主导，适合判断绝对电流误差。",
-    ],
-    normalized_rmse: [
+    normalized_rmse:
       "Linear RMSE normalized by the measured current scale. Smaller values usually mean better overall relative agreement.",
-      "按实测电流尺度归一化的 RMSE。数值越小通常表示总体相对拟合越好。",
-    ],
-    linear_r2: [
+    linear_r2:
       "Coefficient of determination in linear current space. It can look good even if low-current decades are poorly fitted.",
-      "线性电流空间中的决定系数。即使小电流数量级拟合较差，它也可能看起来很好。",
-    ],
-    log_magnitude_r2: [
+    log_magnitude_r2:
       "Coefficient of determination for log10(|I|). It is more sensitive to multi-decade IV behavior than linear R².",
-      "log10(|I|) 空间中的决定系数，比线性 R² 更能反映跨数量级 IV 行为。",
-    ],
-    log_magnitude_mae_decades: [
+    log_magnitude_mae_decades:
       "Mean absolute error in log-current decades. 0.1 decade is roughly a 26% multiplicative error; 0.3 decade is about a factor of 2.",
-      "log 电流数量级中的平均绝对误差。0.1 decade 约等于 26% 倍数误差；0.3 decade 约为 2 倍。",
-    ],
-    reduced_chi_square: [
+    reduced_chi_square:
       "Relative weighted reduced χ²-like value from the active residual weighting. It is not a strict statistical χ² unless weights are true measurement uncertainties.",
-      "由当前 residual weighting 得到的相对加权 reduced χ²-like 值。只有权重是真实测量不确定度时才是严格统计 χ²。",
-    ],
-    weighted_chi_square: [
+    weighted_chi_square:
       "Sum of squared active weighted residuals. Use it to compare fits with the same weighting and data range, not as an absolute probability.",
-      "当前加权残差平方和。适合比较相同 weighting 和电压范围下的拟合，不应当作绝对概率。",
-    ],
-    max_abs_residual_A: [
+    max_abs_residual_A:
       "Largest absolute current residual in amperes. Useful for detecting localized outliers or model failure regions.",
-      "最大绝对电流残差，单位 A。适合发现局部异常点或模型失效区。",
-    ],
   };
-  const fallback: [string, string] = [
-    "Fit-quality metric reported by the backend. Interpret it together with plots, residuals, warnings, and parameter bounds.",
-    "后端报告的拟合质量指标。需要结合图、残差、warnings 和参数边界一起解释。",
-  ];
-  const pair = help[key] ?? fallback;
-  return zh ? pair[1] : pair[0];
+  return (
+    help[key] ??
+    "Fit-quality metric reported by the backend. Interpret it together with plots, residuals, warnings, and parameter bounds."
+  );
 }
 
 function MetricLabel({ name, children, language }: { name: string; children: ReactNode; language: Language }) {
@@ -133,13 +114,11 @@ export function FitStatusBar({
     return (
       <div
         className="fit-status-compact running"
-        title={language === "zh" ? "拟合正在运行" : "Fit is running"}
+        title={"Fit is running"}
       >
         <span className="fit-status-dot" aria-hidden="true" />
         <span className="fit-status-text">
-          {language === "zh"
-            ? `运行中 · ${elapsedSeconds}s`
-            : `Running · ${elapsedSeconds}s elapsed`}
+          {`Running · ${elapsedSeconds}s elapsed`}
         </span>
       </div>
     );
@@ -150,16 +129,12 @@ export function FitStatusBar({
         <div
           className="fit-status-compact warning"
           title={
-            language === "zh"
-              ? "当前拟合已停止，迟到结果会被忽略"
-              : "The current fit was stopped; late results will be ignored"
+            "The current fit was stopped; late results will be ignored"
           }
         >
           <span className="fit-status-dot" aria-hidden="true" />
           <span className="fit-status-text">
-            {language === "zh"
-              ? `已停止 · ${lifecycleStatus.elapsedSeconds}s`
-              : `Cancelled · ${lifecycleStatus.elapsedSeconds}s elapsed`}
+            {`Cancelled · ${lifecycleStatus.elapsedSeconds}s elapsed`}
           </span>
         </div>
       );
@@ -168,16 +143,12 @@ export function FitStatusBar({
         <div
           className="fit-status-compact error"
           title={
-            language === "zh"
-              ? "拟合超时，迟到结果会被忽略"
-              : "Fit timed out; late results will be ignored"
+            "Fit timed out; late results will be ignored"
           }
         >
           <span className="fit-status-dot" aria-hidden="true" />
           <span className="fit-status-text">
-            {language === "zh"
-              ? `超时 · ${lifecycleStatus.timeoutS}s`
-              : `Timeout · exceeded ${lifecycleStatus.timeoutS}s`}
+            {`Timeout · exceeded ${lifecycleStatus.timeoutS}s`}
           </span>
         </div>
       );
@@ -189,9 +160,7 @@ export function FitStatusBar({
         >
           <span className="fit-status-dot" aria-hidden="true" />
           <span className="fit-status-text">
-            {language === "zh"
-              ? "错误 · 未生成结果"
-              : "Error · no result generated"}
+            {"Error · no result generated"}
           </span>
         </div>
       );
@@ -201,7 +170,7 @@ export function FitStatusBar({
         title={t(language, "readyNoFit")}
       >
         <span className="fit-status-dot" aria-hidden="true" />
-        <span className="fit-status-text">{t(language, "readyNoFit")}</span>
+        <span className="fit-status-text">Ready</span>
       </div>
     );
   }
@@ -224,36 +193,20 @@ export function FitStatusBar({
   const warningText =
     backendWarn === 1 ? "1 warning" : `${backendWarn} warnings`;
   const errorText = errors === 1 ? "1 error" : `${errors} errors`;
-  const zhWarningText = `${backendWarn} warning`;
-  const zhErrorText = `${errors} error`;
   const tone = errors > 0 ? "error" : passed ? "ok" : "warning";
-  const statusText =
-    language === "zh"
-      ? [
-          passed
-            ? "已收敛"
-            : result.success
-              ? "已收敛，门控未通过"
-              : "拟合失败",
-          `RMSE ${fmtEng(rmse, 4)} A`,
-          zhWarningText,
-          errors ? zhErrorText : null,
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : [
-          passed
-            ? "Converged"
-            : result.success
-              ? "Converged, gate failed"
-              : "Fit failed",
-          `RMSE ${fmtEng(rmse, 4)} A`,
-          `${fmtEng(rmseRatio, 3)}× scale`,
-          backendWarn ? warningText : "0 warnings",
-          errors ? errorText : null,
-        ]
-          .filter(Boolean)
-          .join(" · ");
+  const statusText = [
+    passed
+      ? "Converged"
+      : result.success
+        ? "Converged, gate failed"
+        : "Fit failed",
+    `RMSE ${fmtEng(rmse, 4)} A`,
+    `${fmtEng(rmseRatio, 3)}× scale`,
+    backendWarn ? warningText : "0 warnings",
+    errors ? errorText : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <div className={`fit-status-compact ${tone}`} title={title}>
@@ -284,15 +237,11 @@ export function FitProcessDiagnostics({
     ? `${d.points_used}/${d.points_in_selected_range || d.points_total}`
     : "—";
   const title =
-    language === "zh"
-      ? "拟合过程与质量指标"
-      : "Fit process and quality metrics";
+    "Fit process and quality metrics";
   const chiLabel =
-    language === "zh" ? "相对加权 reduced χ²" : "relative weighted reduced χ²";
+    "relative weighted reduced χ²";
   const chiHelp =
-    language === "zh"
-      ? "这里的 reduced χ²-like 指标使用当前 residual weighting 计算。只有当权重是真实测量不确定度时，它才有严格统计意义；否则主要是相对残差尺度诊断。"
-      : "This reduced χ²-like metric is computed from the active weighted residuals. It is strictly statistical only when weights are true measurement uncertainties; otherwise it is a relative residual-scale diagnostic.";
+    "This reduced χ²-like metric is computed from the active weighted residuals. It is strictly statistical only when weights are true measurement uncertainties; otherwise it is a relative residual-scale diagnostic.";
 
   return (
     <div className="fit-process-diagnostics">
@@ -300,7 +249,7 @@ export function FitProcessDiagnostics({
         <summary>
           <span>{title}</span>
           <span className="fit-process-summary">
-            {language === "zh" ? "点" : "pts"} {points}
+            {"pts"} {points}
           </span>
           <span className="fit-process-summary">
             evals {fmtNumber(nfev, 0)}
@@ -313,22 +262,22 @@ export function FitProcessDiagnostics({
         <div className="fit-process-body">
           <section>
             <strong>
-              {language === "zh" ? "质量指标" : "Quality metrics"}
+              {"Quality metrics"}
             </strong>
             <div className="fit-process-grid">
               <MetricLabel name="linear_rmse_A" language={language}>RMSE</MetricLabel>
               <MetricValue name="linear_rmse_A" language={language}>{fmtMetric(m.linear_rmse_A, "A")}</MetricValue>
               <MetricLabel name="normalized_rmse" language={language}>
-                {language === "zh" ? "归一化 RMSE" : "Normalized RMSE"}
+                {"Normalized RMSE"}
               </MetricLabel>
               <MetricValue name="normalized_rmse" language={language}>{fmtNumber(m.normalized_rmse, 4)}</MetricValue>
-              <MetricLabel name="linear_r2" language={language}>{language === "zh" ? "线性 R²" : "Linear R²"}</MetricLabel>
+              <MetricLabel name="linear_r2" language={language}>{"Linear R²"}</MetricLabel>
               <MetricValue name="linear_r2" language={language}>{fmtNumber(r2, 5)}</MetricValue>
               <MetricLabel name="log_magnitude_r2" language={language}>
-                {language === "zh" ? "log-magnitude R²" : "Log-magnitude R²"}
+                {"Log-magnitude R²"}
               </MetricLabel>
               <MetricValue name="log_magnitude_r2" language={language}>{fmtNumber(logR2, 5)}</MetricValue>
-              <MetricLabel name="log_magnitude_mae_decades" language={language}>{language === "zh" ? "log MAE" : "Log MAE"}</MetricLabel>
+              <MetricLabel name="log_magnitude_mae_decades" language={language}>{"Log MAE"}</MetricLabel>
               <MetricValue name="log_magnitude_mae_decades" language={language}>{fmtMetric(m.log_magnitude_mae_decades, "dec")}</MetricValue>
               <MetricLabel name="reduced_chi_square" language={language}>{chiLabel}</MetricLabel>
               <MetricValue name="reduced_chi_square" language={language}>{fmtNumber(reducedChi, 4)}</MetricValue>
@@ -336,32 +285,32 @@ export function FitProcessDiagnostics({
           </section>
           <section>
             <strong>
-              {language === "zh" ? "求解器过程" : "Solver process"}
+              {"Solver process"}
             </strong>
             <div className="fit-process-grid">
-              <span>{language === "zh" ? "本次耗时" : "Elapsed"}</span>
+              <span>{"Elapsed"}</span>
               <b>{fmtMetric(elapsed, "s")}</b>
-              <span>{language === "zh" ? "函数评估" : "Function evals"}</span>
+              <span>{"Function evals"}</span>
               <b>{fmtNumber(nfev, 0)}</b>
               <span>
-                {language === "zh" ? "Jacobian 评估" : "Jacobian evals"}
+                {"Jacobian evals"}
               </span>
               <b>{fmtNumber(d?.jacobian_evaluations, 0)}</b>
-              <span>{language === "zh" ? "自由参数" : "Free parameters"}</span>
+              <span>{"Free parameters"}</span>
               <b>{fmtNumber(d?.free_parameter_count, 0)}</b>
-              <span>{language === "zh" ? "自由度" : "DoF"}</span>
+              <span>{"DoF"}</span>
               <b>{fmtNumber(d?.degrees_of_freedom, 0)}</b>
-              <span>{language === "zh" ? "优化状态" : "Optimizer status"}</span>
+              <span>{"Optimizer status"}</span>
               <b>{d?.optimizer_status ?? "—"}</b>
-              <span>{language === "zh" ? "Cost" : "Cost"}</span>
+              <span>{"Cost"}</span>
               <b>{fmtNumber(d?.cost, 4)}</b>
-              <span>{language === "zh" ? "Optimality" : "Optimality"}</span>
+              <span>{"Optimality"}</span>
               <b>{fmtNumber(d?.optimality, 4)}</b>
             </div>
             {d?.active_bounds?.length ? (
               <p className="fit-process-note">
                 <strong>
-                  {language === "zh" ? "活跃边界：" : "Active bounds: "}
+                  {"Active bounds: "}
                 </strong>
                 {d.active_bounds.join(", ")}
               </p>
@@ -369,25 +318,23 @@ export function FitProcessDiagnostics({
             {d?.optimizer_message ? (
               <p className="fit-process-note">
                 <strong>
-                  {language === "zh" ? "求解器消息：" : "Solver message: "}
+                  {"Solver message: "}
                 </strong>
                 {d.optimizer_message}
               </p>
             ) : null}
           </section>
           <section>
-            <strong>{language === "zh" ? "本次会话" : "This session"}</strong>
+            <strong>{"This session"}</strong>
             <div className="fit-process-grid compact">
-              <span>{language === "zh" ? "已运行拟合" : "Fits run"}</span>
+              <span>{"Fits run"}</span>
               <b>{sessionStats.fitsRun}</b>
-              <span>{language === "zh" ? "总函数评估" : "Total evals"}</span>
+              <span>{"Total evals"}</span>
               <b>{sessionStats.totalFunctionEvaluations}</b>
-              <span>{language === "zh" ? "总拟合耗时" : "Total fit time"}</span>
+              <span>{"Total fit time"}</span>
               <b>{fmtMetric(sessionStats.totalElapsedS, "s")}</b>
               <span>
-                {language === "zh"
-                  ? "root-solver failures"
-                  : "Root-solver failures"}
+                {"Root-solver failures"}
               </span>
               <b>{sessionStats.totalRootSolverFailures}</b>
             </div>
@@ -420,9 +367,7 @@ export function FitDiagnostics({
 
   const logExcluded = result.metrics.log_points_excluded ?? 0;
   const title =
-    language === "zh"
-      ? `Diagnostics：${warningCount} warning，${errors} error`
-      : `Diagnostics: ${warningCount} warning(s), ${errors} error(s)`;
+    `Diagnostics: ${warningCount} warning(s), ${errors} error(s)`;
 
   return (
     <div
@@ -436,7 +381,7 @@ export function FitDiagnostics({
               className="diagnostics-close"
               type="button"
               aria-label={
-                language === "zh" ? "关闭 diagnostics" : "Close diagnostics"
+                "Close diagnostics"
               }
               onClick={(event) => {
                 event.preventDefault();
@@ -454,16 +399,14 @@ export function FitDiagnostics({
               <strong>{verdict.title}</strong>
               <p>{verdict.message}</p>
               <p>
-                {language === "zh"
-                  ? "Log MAE 排除近零点："
-                  : "Log MAE near-zero exclusions:"}{" "}
+                {"Log MAE near-zero exclusions:"}{" "}
                 {Math.round(logExcluded)}
               </p>
             </section>
           ) : null}
           {warnings.length ? (
             <section>
-              <strong>{language === "zh" ? "Warnings" : "Warnings"}</strong>
+              <strong>{"Warnings"}</strong>
               <ul>
                 {warnings.map((w) => (
                   <li
@@ -479,10 +422,10 @@ export function FitDiagnostics({
           ) : null}
           <div className="fit-verdict-actions">
             <button type="button" onClick={onCheckLogIv}>
-              {language === "zh" ? "查看 Log I-V" : "Check log I-V"}
+              {"Check log I-V"}
             </button>
             <button type="button" onClick={onAdjustInitials}>
-              {language === "zh" ? "调整初值" : "Adjust initials"}
+              {"Adjust initials"}
             </button>
           </div>
         </div>

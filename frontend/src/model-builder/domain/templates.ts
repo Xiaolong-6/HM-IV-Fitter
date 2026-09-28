@@ -17,7 +17,7 @@ export const MB3_COMPONENT_TEMPLATES: Mb3ComponentTemplate[] = [
     label: "Resistance",
     behavior: "R_of_V",
     expression: "R0",
-    parameters: [{ symbol: "R0", value: 10, lower: 0, upper: 1e9, fit: true, unit: "ohm" }],
+    parameters: [{ symbol: "R0", value: 10, lower: 1e-12, upper: 1e9, fit: true, unit: "ohm" }],
   },
   {
     key: "shockley_diode",

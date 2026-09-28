@@ -43,9 +43,9 @@ export async function getRegistry(): Promise<FunctionDefinition[]> {
   return response.json();
 }
 
-export async function validateModel(model: ModelSpec): Promise<FitWarning[]> {
-  if (USE_BROWSER_RUNTIME) return browserCall("validate_model", model);
-  return postJson(`${API_PREFIX}/validate-model`, model);
+export async function validateModel(model: ModelSpec, signal?: AbortSignal): Promise<FitWarning[]> {
+  if (USE_BROWSER_RUNTIME) return browserCall("validate_model", model, signal);
+  return postJson(`${API_PREFIX}/validate-model`, model, { signal });
 }
 
 export async function equations(model: ModelSpec, signal?: AbortSignal): Promise<EquationSummary> {

@@ -76,6 +76,7 @@ export interface Mb3CompileResult {
   activeComponentIds: string[];
   activeWireIds: string[];
   model: ModelSpec;
+  errors: string[];
   warnings: string[];
   formulaLatex: string[];
   formulaSections: Mb3FormulaSection[];

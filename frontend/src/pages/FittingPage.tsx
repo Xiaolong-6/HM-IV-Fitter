@@ -1,9 +1,11 @@
-import { useEffect, useMemo, useReducer, useRef } from "react";
-import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import type { EquationSummary, FitConfig, FitResult, FitSessionStats, FunctionDefinition, ModelSpec, TraceData } from "../model/types";
-import { exportReport, exportReportCsv, fitTrace, getRegistry, equations } from "../api/client";
+import { exportReport, exportReportCsv, fitTrace, getRegistry, equations, validateModel } from "../api/client";
+import { browserRuntimeEnabled, getBrowserRuntimeStatus, resetBrowserRuntime, subscribeBrowserRuntimeStatus } from "../api/browserRuntime";
 import { emptyTrace, estimateResidualFloorA } from "../model/utils";
 import { seedModelFromFittedValues } from "../model/parameterGrouping";
+import { syncStoredCanvasParametersFromModel } from "../model-builder/preview/fittedCanvasPromotion";
 import { WorkflowTopNav } from "../components/WorkflowTopNav";
 import { FitStatusBar } from "../components/FitStatusBar";
 import { FitConfigPanel, type FitDrawerMode } from "../components/FitConfigPanel";
@@ -15,20 +17,30 @@ import { buildReportBaseName, emptyReportArtifacts, type ReportArtifacts } from 
 import { canGenerateReport, createErrorLifecycle, createRunningLifecycle, createTimeoutLifecycle, elapsedSecondsSince, nextRunId, shouldAcceptRunResult, terminalCancelledState, type FitLifecycleState } from "../model/fitLifecycle";
 import { buildHtmlReportDocument } from "../model/htmlReport";
 import { createInitialModel, initialConfig } from "../model/defaults";
+import { emptyCanvasState, canvasStateToMb3Graph } from "../model-builder/preview/canvasState";
+import { LAYOUT_STORAGE_KEY, readJson } from "../model-builder/preview/previewStorage";
+import { compileMb3Graph } from "../model-builder/domain/compile";
 import { ModelWorkflowPage, FittingWorkflowPage } from "./components/WorkflowSections";
 import { ReportWorkflowPage } from "./components/ReportWorkflowPage";
 import { usePaneResize } from "./hooks/usePaneResize";
 import { useFitTimer } from "./hooks/useFitTimer";
-import { useAppZoom } from "./hooks/useAppZoom";
 import { useWorkflowLayoutState } from "./hooks/useWorkflowLayoutState";
 import { fitResultIsSafeToPromote, warningDismissKey } from "./fitPageUtils";
 import { FitActionButtons, FitMessages, FitReportButton } from "./components/FitActionCluster";
 import { APP_VERSION } from "../utils/version";
-import { checkLatestRelease, type ReleaseCheckResult } from "../services/releaseCheck";
 
-type ZoomStyle = CSSProperties & { "--app-zoom": number };
-// Web workflow uses a literal zoom scale: 100% means 1.0x CSS sizing.
-const VISUAL_ZOOM_BASELINE = 1;
+const UI_LANGUAGE: Language = "en";
+
+function createInitialVisibleModel(appVersion: string): ModelSpec {
+  const baseModel = createInitialModel(appVersion);
+  const canvasState = readJson(LAYOUT_STORAGE_KEY, emptyCanvasState());
+  return compileMb3Graph(canvasStateToMb3Graph(canvasState), baseModel).model;
+}
+
+function modelHasRunnablePath(model: ModelSpec): boolean {
+  if ((model.graph?.components?.length ?? 0) > 0) return true;
+  return model.core.length + model.series.length + model.parallel.length > 0;
+}
 
 type FitStatusState = {
   isFitting: boolean;
@@ -54,7 +66,6 @@ type FittingPageState = {
   openSections: Record<string, boolean>;
   dismissedWarningKey: string;
   fitSessionStats: FitSessionStats;
-  releaseCheck: ReleaseCheckResult | null;
 };
 
 type StateUpdater<T> = T | ((current: T) => T);
@@ -90,7 +101,7 @@ function createInitialFittingPageState(): FittingPageState {
     registry: [],
     traces: [],
     selectedTraceId: null,
-    model: createInitialModel(APP_VERSION),
+    model: createInitialVisibleModel(APP_VERSION),
     config: initialConfig,
     fitDrawerMode: "none",
     result: null,
@@ -119,7 +130,6 @@ function createInitialFittingPageState(): FittingPageState {
       totalElapsedS: 0,
       totalRootSolverFailures: 0,
     },
-    releaseCheck: null,
   };
 }
 
@@ -147,7 +157,6 @@ export function FittingPage() {
     openSections,
     dismissedWarningKey,
     fitSessionStats,
-    releaseCheck,
   } = pageState;
   const { isFitting, fitStartedAt, elapsedSeconds, lifecycle: fitLifecycle } = fitStatus;
 
@@ -173,20 +182,70 @@ export function FittingPage() {
   const setOpenSections = (value: StateUpdater<Record<string, boolean>>) => setPageState("openSections", value);
   const setDismissedWarningKey = (value: StateUpdater<string>) => setPageState("dismissedWarningKey", value);
   const setFitSessionStats = (value: StateUpdater<FitSessionStats>) => setPageState("fitSessionStats", value);
-  const setReleaseCheck = (value: StateUpdater<ReleaseCheckResult | null>) => setPageState("releaseCheck", value);
   const updateFitStatus = (patch: Partial<FitStatusState> | ((current: FitStatusState) => FitStatusState)) => {
     setPageState("fitStatus", (current) =>
       typeof patch === "function" ? patch(current) : { ...current, ...patch },
     );
   };
 
+  const [browserRuntimeStatus, setBrowserRuntimeStatus] = useState(
+    getBrowserRuntimeStatus,
+  );
+
   const abortFitRef = useRef<AbortController | null>(null);
   const fitRunSeqRef = useRef(0);
   const activeFitRunIdRef = useRef<number | null>(null);
   const cancelledFitRunIdsRef = useRef(new Set<number>());
+
+  function invalidateActiveFitContext() {
+    const runId = activeFitRunIdRef.current;
+    if (runId !== null) cancelledFitRunIdsRef.current.add(runId);
+    activeFitRunIdRef.current = null;
+    abortFitRef.current?.abort();
+    abortFitRef.current = null;
+    updateFitStatus({
+      isFitting: false,
+      fitStartedAt: null,
+      elapsedSeconds: 0,
+      lifecycle: { kind: "idle" },
+    });
+  }
+
+  function invalidateFitArtifacts() {
+    invalidateActiveFitContext();
+    setResult(null);
+    setReportArtifacts(emptyReportArtifacts);
+    setFitPromotionNotice(null);
+    setDismissedWarningKey("");
+    setError(null);
+  }
+
+  function replaceTraces(next: TraceData[]) {
+    invalidateFitArtifacts();
+    setTraces(next);
+    const firstId = next[0]?.trace_id ?? null;
+    setSelectedTraceId((current) =>
+      current && next.some((trace) => trace.trace_id === current)
+        ? current
+        : firstId,
+    );
+    setNoTraceRunAttempted(false);
+  }
+
+  function selectTrace(id: string) {
+    if (id === selectedTraceId) return;
+    invalidateFitArtifacts();
+    setSelectedTraceId(id);
+    setNoTraceRunAttempted(false);
+  }
+
+  function updateUserModel(next: ModelSpec) {
+    invalidateFitArtifacts();
+    setModel(next);
+  }
+
   const report = reportArtifacts.report;
   const reportMessage = reportArtifacts.message;
-  const { zoom, setZoom } = useAppZoom(1);
   const {
     activeView,
     setActiveView,
@@ -198,24 +257,33 @@ export function FittingPage() {
     setReportPanePct,
     plotPanePct,
     setPlotPanePct,
-    language,
-    setLanguage,
   } = useWorkflowLayoutState();
+  const language = UI_LANGUAGE;
   const startPaneResize = usePaneResize();
-  useEffect(() => {
-    let cancelled = false;
-    checkLatestRelease().then((next) => {
-      if (!cancelled) setReleaseCheck(next);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+
+  useEffect(
+    () => subscribeBrowserRuntimeStatus(setBrowserRuntimeStatus),
+    [],
+  );
+
+  async function loadRegistry() {
+    try {
+      const nextRegistry = await getRegistry();
+      setRegistry(nextRegistry);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  function retryBrowserRuntime() {
+    resetBrowserRuntime();
+    setError(null);
+    void loadRegistry();
+  }
 
   useEffect(() => {
-    getRegistry()
-      .then(setRegistry)
-      .catch((e) => setError(String(e)));
+    void loadRegistry();
   }, []);
 
   useFitTimer({
@@ -235,6 +303,7 @@ export function FittingPage() {
     traces[0] ??
     emptyTrace();
   const hasSelectedTrace = selectedTrace.voltage_V.length > 0;
+  const hasRunnableModel = modelHasRunnablePath(model);
   const autoVoltageRange = useMemo(() => {
     const finite = selectedTrace.voltage_V.filter(Number.isFinite);
     if (!finite.length) return { vMin: null, vMax: null };
@@ -309,10 +378,21 @@ export function FittingPage() {
         lifecycle: {
           kind: "error",
           runId,
-          message: t(language, "noTraceError"),
+          message: t(UI_LANGUAGE, "noTraceError"),
         },
       });
-      setError(t(language, "noTraceError"));
+      setError(t(UI_LANGUAGE, "noTraceError"));
+      return;
+    }
+    if (!modelHasRunnablePath(model)) {
+      activeFitRunIdRef.current = null;
+      setResult(null);
+      setNoTraceRunAttempted(false);
+      const message = "Build a complete V-to-GND model before running a fit.";
+      updateFitStatus({
+        lifecycle: createErrorLifecycle(runId, message),
+      });
+      setError(message);
       return;
     }
     setNoTraceRunAttempted(false);
@@ -345,12 +425,38 @@ export function FittingPage() {
         lifecycle: createTimeoutLifecycle(runId, timeoutS),
       });
       setError(
-        language === "zh"
-          ? `拟合超过 ${timeoutS} 秒，已中止请求；本次结果不会写入界面。`
-          : `Fit exceeded ${timeoutS} s. The request was stopped and this run result will not update the interface.`,
+        `Fit exceeded ${timeoutS} s. The request was stopped and this run result will not update the interface.`,
       );
     }, timeoutS * 1000);
     try {
+      // Allow the running state and Stop control to paint before dispatching
+      // validation/solver work to the numerical Worker. This makes cancellation
+      // deterministic even for fits that finish very quickly.
+      await new Promise<void>((resolve) => {
+        window.requestAnimationFrame(() => resolve());
+      });
+      if (controller.signal.aborted) throw new DOMException("Operation aborted.", "AbortError");
+      const validationWarnings = await validateModel(modelBeforeFit, controller.signal);
+      if (
+        !shouldAcceptRunResult({
+          activeRunId: activeFitRunIdRef.current,
+          runId,
+          cancelledRunIds: cancelledFitRunIdsRef.current,
+        })
+      )
+        return;
+      const blockingValidation = validationWarnings.filter(
+        (warning) => warning.severity === "error",
+      );
+      if (blockingValidation.length) {
+        const message = `Model validation failed: ${blockingValidation
+          .map((warning) => warning.message)
+          .join(" ")}`;
+        updateFitStatus({ lifecycle: createErrorLifecycle(runId, message) });
+        setError(message);
+        return;
+      }
+
       const fit = await fitTrace(
         selectedTrace,
         modelBeforeFit,
@@ -382,13 +488,13 @@ export function FittingPage() {
           Math.max(0, Math.round(diag?.root_solver_failures ?? 0)),
       }));
         if (fitResultIsSafeToPromote(fit)) {
-        setModel(seedModelFromFittedValues(modelBeforeFit, fit));
+        const promotedModel = seedModelFromFittedValues(modelBeforeFit, fit);
+        syncStoredCanvasParametersFromModel(promotedModel);
+        setModel(promotedModel);
         setFitPromotionNotice(null);
       } else {
         setFitPromotionNotice(
-          language === "zh"
-            ? "本次拟合数值上结束，但质量门控未通过；fitted values 已显示，但没有自动写回下一次初值。可尝试恢复初值、应用数据建议边界，或使用 synthetic 真值作为初值。"
-            : "Fit ended numerically, but quality gating did not pass; fitted values are shown but were not promoted to the next initials. Try restoring initials, applying data bounds, or seeding from synthetic ground truth.",
+          "Fit ended numerically, but quality gating did not pass; fitted values are shown but were not promoted to the next initials. Try restoring initials, applying data bounds, or seeding from synthetic ground truth.",
         );
       }
       setOpenSections((current) => ({
@@ -407,7 +513,7 @@ export function FittingPage() {
         ) {
           setReportArtifacts({
             report: autoReport.markdown,
-            message: language === "zh" ? "报告已就绪。" : "Report is ready.",
+            message: "Report is ready.",
           });
         }
       } catch {
@@ -420,10 +526,7 @@ export function FittingPage() {
         ) {
           setReportArtifacts({
             report: "",
-            message:
-              language === "zh"
-                ? "拟合完成，但报告自动更新失败。"
-                : "Fit completed, but automatic report update failed.",
+            message: "Fit completed, but automatic report update failed.",
           });
         }
       }
@@ -441,11 +544,7 @@ export function FittingPage() {
         cancelledFitRunIdsRef.current.add(runId);
         activeFitRunIdRef.current = null;
         updateFitStatus({ lifecycle: terminalCancelledState(runId, fitStartedAt) });
-        setError(
-          language === "zh"
-            ? "拟合请求已中止。本次结果不会写入界面。"
-            : "Fit request was aborted. This run result will not update the interface.",
-        );
+        setError("Fit request was aborted. This run result will not update the interface.");
       } else {
         const message = String(e);
         updateFitStatus({ lifecycle: createErrorLifecycle(runId, message) });
@@ -476,11 +575,7 @@ export function FittingPage() {
       fitStartedAt: null,
       lifecycle: terminalCancelledState(runId ?? fitRunSeqRef.current, fitStartedAt),
     });
-    setError(
-      language === "zh"
-        ? "已停止当前拟合请求。本次结果不会写入界面。"
-        : "Current fit request stopped. This run result will not update the interface.",
-    );
+    setError("Current fit request stopped. This run result will not update the interface.");
   }
 
 
@@ -489,10 +584,7 @@ export function FittingPage() {
     const r = await exportReport(result);
     setReportArtifacts({
       report: r.markdown,
-      message:
-        language === "zh"
-          ? "报告已生成。可下载 HTML 或完整 CSV 报告。"
-          : "Report generated. You can download the HTML or full CSV report.",
+      message: "Report generated. You can download the HTML or full CSV report.",
     });
     setActiveView("report");
   }
@@ -509,7 +601,7 @@ export function FittingPage() {
     URL.revokeObjectURL(url);
     setReportArtifacts((current) => ({
       ...current,
-      message: `${language === "zh" ? "已导出" : "Exported"}: ${filename}`,
+      message: `Exported: ${filename}`,
     }));
   }
 
@@ -586,6 +678,7 @@ export function FittingPage() {
     <>
       <FitActionButtons
         hasSelectedTrace={hasSelectedTrace}
+        hasRunnableModel={hasRunnableModel}
         isFitting={isFitting}
         result={result}
         language={language}
@@ -604,6 +697,7 @@ export function FittingPage() {
   const fitMessagesNode = (
     <FitMessages
       hasTrace={selectedTrace.voltage_V.length > 0}
+      hasRunnableModel={hasRunnableModel}
       error={error}
       isFitting={isFitting}
       fitPromotionNotice={fitPromotionNotice}
@@ -612,83 +706,43 @@ export function FittingPage() {
     />
   );
 
-  const effectiveReleaseUpdateAvailable = Boolean(releaseCheck?.updateAvailable);
-  const effectiveLatestVersion = releaseCheck?.latestVersion ?? null;
-  const effectiveReleaseUrl =
-    releaseCheck?.releaseUrl || "https://github.com/Xiaolong-6/HM-IV-Fitter/releases";
-
-  const openReleasePage = () => {
-    window.open(effectiveReleaseUrl, "_blank", "noopener,noreferrer");
-  };
-
-  const zoomControl = (
-    <div
-      className="zoom-control workflow-zoom-control"
-      title={t(language, "appZoomHelp")}
-    >
-      <button
-        onClick={() =>
-          setZoom((z) => Math.max(0.55, Number((z - 0.06).toFixed(2))))
-        }
-      >
-        −
-      </button>
-      <span>{Math.round(zoom * 100)}%</span>
-      <button
-        onClick={() =>
-          setZoom((z) => Math.min(2.0, Number((z + 0.06).toFixed(2))))
-        }
-      >
-        +
-      </button>
-    </div>
-  );
-
   return (
-    <div
-      className="app four-step-app"
-      style={{ "--app-zoom": zoom * VISUAL_ZOOM_BASELINE } as ZoomStyle}
-    >
-      <WorkflowTopNav
-        activeStep={activeView}
-        onSelect={setActiveView}
-        version={APP_VERSION}
-        language={language}
-        onLanguageChange={setLanguage}
-        zoomControl={zoomControl}
-        updateAvailable={effectiveReleaseUpdateAvailable}
-        latestVersion={effectiveLatestVersion}
-        onReleaseClick={openReleasePage}
-      />
+    <div className="app four-step-app">
+      <WorkflowTopNav activeStep={activeView} onSelect={setActiveView} />
 
       <main className={`workspace four-step-workspace workflow-view-${activeView}`}>
+        {browserRuntimeEnabled() && browserRuntimeStatus.state === "loading" ? (
+          <div className="browser-runtime-banner loading" role="status">
+            Preparing local fitting engine…
+          </div>
+        ) : null}
+        {browserRuntimeEnabled() && browserRuntimeStatus.state === "error" ? (
+          <div className="browser-runtime-banner error" role="alert">
+            <span>
+              Local fitting engine failed to start
+              {browserRuntimeStatus.error
+                ? `: ${browserRuntimeStatus.error}`
+                : "."}
+            </span>
+            <button type="button" onClick={retryBrowserRuntime}>
+              Retry
+            </button>
+          </div>
+        ) : null}
         {activeView === "data" ? (
           <DataImportWorkspace
             language={language}
             traces={traces}
             selectedTraceId={selectedTraceId}
-            onTraces={(next) => {
-              setTraces(next);
-              setResult(null);
-              setReportArtifacts(emptyReportArtifacts);
-            }}
-            onSelectTrace={(id) => {
-              setSelectedTraceId(id);
-              setResult(null);
-              setReportArtifacts(emptyReportArtifacts);
-              setNoTraceRunAttempted(false);
-            }}
+            onTraces={replaceTraces}
+            onSelectTrace={selectTrace}
             onNextToFitting={() => setActiveView("model")}
           />
         ) : activeView === "model" ? (
           <ModelWorkflowPage
             language={language}
             model={model}
-            setModel={(next) => {
-              setModel(next);
-              setResult(null);
-              setReportArtifacts(emptyReportArtifacts);
-            }}
+            setModel={updateUserModel}
             registry={registry}
             equationSummary={equationSummary}
             result={result}
@@ -701,17 +755,8 @@ export function FittingPage() {
             syntheticTool={
               <SyntheticTraceTool
                 traces={traces}
-                onTraces={(next) => {
-                  setTraces(next);
-                  setResult(null);
-                  setReportArtifacts(emptyReportArtifacts);
-                }}
-                onSelectTrace={(id) => {
-                  setSelectedTraceId(id);
-                  setResult(null);
-                  setReportArtifacts(emptyReportArtifacts);
-                  setNoTraceRunAttempted(false);
-                }}
+                onTraces={replaceTraces}
+                onSelectTrace={selectTrace}
                 model={model}
                 language={language}
                 disabled={isFitting}
@@ -724,12 +769,7 @@ export function FittingPage() {
             selectedTrace={selectedTrace}
             selectedTraceId={selectedTraceId}
             traces={traces}
-            setSelectedTraceId={(id) => {
-              setSelectedTraceId(id);
-              setResult(null);
-              setReportArtifacts(emptyReportArtifacts);
-              setNoTraceRunAttempted(false);
-            }}
+            setSelectedTraceId={selectTrace}
             setActiveView={setActiveView}
             config={config}
             setConfig={setConfig}
@@ -743,10 +783,7 @@ export function FittingPage() {
             result={result}
             registry={registry}
             model={model}
-            updateParameterModel={(next) => {
-              setModel(next);
-              setReportArtifacts(emptyReportArtifacts);
-            }}
+            updateParameterModel={updateUserModel}
             isFitting={isFitting}
             leftPct={fittingPanePct}
             plotPct={plotPanePct}

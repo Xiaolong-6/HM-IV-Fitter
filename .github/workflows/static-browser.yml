@@ -9,6 +9,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "docs/STATIC_BROWSER_PLAN.md"
+      - "docs/STATIC_BROWSER_STABILIZATION.md"
       - "package.json"
       - "vite.config.ts"
       - ".github/workflows/static-browser.yml"
@@ -151,4 +152,5 @@ jobs:
           npm --prefix frontend run test -- \
             src/model/__tests__ \
             src/model-builder/__tests__ \
+            src/api/__tests__ \
             --reporter=dot

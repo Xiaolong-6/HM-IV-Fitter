@@ -21,6 +21,7 @@ describe("model-builder compile contract", () => {
     const compiled = compileMb3Graph(graph);
 
     expect(compiled.activeComponentIds).toEqual(expect.arrayContaining(["Rs", "D1", "Rsh"]));
+    expect(compiled.errors).toEqual([]);
     expect(compiled.model.graph?.schema_version).toBe("model_builder");
     expect(compiled.model.graph?.components.map((component) => component.id)).toEqual(
       expect.arrayContaining(["Rs", "D1", "Rsh"]),
@@ -31,6 +32,8 @@ describe("model-builder compile contract", () => {
     expect(compiled.model.core[0].params.I0_A.value).toBe(1e-12);
     expect(compiled.model.series[0].params.Rs_ohm.value).toBe(10);
     expect(compiled.model.parallel[0].params.Rsh_ohm.value).toBe(1e9);
+    expect(compiled.model.series[0].polarity).toBeUndefined();
+    expect(compiled.model.parallel[0].polarity).toBeUndefined();
     expect(compiled.formulaLatex.join("\n")).toContain("V_{ext}");
     expect(compiled.formulaLatex.join("\n")).toContain("I_{D1}");
     expect(compiled.formulaLatex.join("\n")).toContain("I_{Rsh}");
@@ -88,6 +91,7 @@ describe("model-builder compile contract", () => {
     expect(compiled.activeComponentIds).not.toContain("Ropen");
     expect(compiled.model.graph?.components.map((component) => component.id)).not.toContain("Ropen");
     expect(compiled.warnings.join("\n")).toContain("Open branch ignored");
+    expect(compiled.errors).toEqual([]);
     expect(evaluateMb3GraphConnectivity(graph).level).toBe("warning");
   });
 
@@ -176,6 +180,100 @@ describe("model-builder compile contract", () => {
     v.position.y = gnd.position.y + 100;
 
     expect(evaluateMb3GraphConnectivity(graph).label).toContain("V terminal is below GND");
+  });
+
+
+  it("blocks active resistance models whose fitted lower bound includes zero", () => {
+    const graph = structuredClone(
+      MB3_BUILT_IN_PRESETS.find((preset) => preset.id === "builtin_single_diode_model")!.graph,
+    ) as Mb3Graph;
+    const rs = graph.components.find((component) => component.id === "Rs");
+    if (!rs) throw new Error("Rs missing from preset");
+    rs.parameters[0].lower = 0;
+
+    const compiled = compileMb3Graph(graph);
+    expect(compiled.errors.join("\n")).toContain(
+      "strictly positive lower bound",
+    );
+  });
+
+  it("blocks solver-reserved custom parameter names on the active subgraph", () => {
+    const graph: Mb3Graph = {
+      version: 3,
+      terminals: { positive: "V", ground: "GND" },
+      nodes: [
+        { id: "V", kind: "terminal", label: "V", role: "positive", position: { x: 0, y: 0 } },
+        { id: "GND", kind: "terminal", label: "GND", role: "ground", position: { x: 0, y: 200 } },
+      ],
+      components: [{
+        id: "C1",
+        label: "C1",
+        templateKey: "custom",
+        behavior: "I_of_V",
+        expression: "A*V",
+        sign: 1,
+        position: { x: 0, y: 100 },
+        parameters: [
+          { symbol: "V", value: 1, lower: null, upper: null, fit: true, unit: "1" },
+          { symbol: "A", value: 1, lower: null, upper: null, fit: true, unit: "A/V" },
+        ],
+      }],
+      wires: [
+        { id: "w1", from: { kind: "node", id: "V" }, to: { kind: "component", id: "C1", port: "p" } },
+        { id: "w2", from: { kind: "component", id: "C1", port: "n" }, to: { kind: "node", id: "GND" } },
+      ],
+    };
+
+    const compiled = compileMb3Graph(graph);
+    expect(compiled.errors.join("\n")).toContain("reserved by the solver");
+  });
+
+  it("blocks unknown expression symbols before the Fit page", () => {
+    const graph: Mb3Graph = {
+      version: 3,
+      terminals: { positive: "V", ground: "GND" },
+      nodes: [
+        { id: "V", kind: "terminal", label: "V", role: "positive", position: { x: 0, y: 0 } },
+        { id: "GND", kind: "terminal", label: "GND", role: "ground", position: { x: 0, y: 200 } },
+      ],
+      components: [{
+        id: "C1",
+        label: "C1",
+        templateKey: "custom",
+        behavior: "I_of_V",
+        expression: "A*V+B",
+        sign: 1,
+        position: { x: 0, y: 100 },
+        parameters: [
+          { symbol: "A", value: 1, lower: null, upper: null, fit: true, unit: "A/V" },
+        ],
+      }],
+      wires: [
+        { id: "w1", from: { kind: "node", id: "V" }, to: { kind: "component", id: "C1", port: "p" } },
+        { id: "w2", from: { kind: "component", id: "C1", port: "n" }, to: { kind: "node", id: "GND" } },
+      ],
+    };
+
+    const compiled = compileMb3Graph(graph);
+    expect(compiled.errors.join("\n")).toContain("unknown symbol(s): B");
+  });
+
+  it("blocks inconsistent or fitted graph temperatures", () => {
+    const graph = structuredClone(
+      MB3_BUILT_IN_PRESETS.find((preset) => preset.id === "builtin_two_diode_model")!.graph,
+    ) as Mb3Graph;
+    const d1 = graph.components.find((component) => component.id === "D1");
+    const d2 = graph.components.find((component) => component.id === "D2");
+    if (!d1 || !d2) throw new Error("diodes missing from preset");
+    const t1 = d1.parameters.find((parameter) => parameter.symbol === "T");
+    const t2 = d2.parameters.find((parameter) => parameter.symbol === "T");
+    if (!t1 || !t2) throw new Error("temperature parameters missing");
+    t1.fit = true;
+    t2.value = t1.value + 20;
+
+    const compiled = compileMb3Graph(graph);
+    expect(compiled.errors.join("\n")).toContain("must remain fixed");
+    expect(compiled.errors.join("\n")).toContain("must share one T");
   });
 
 });

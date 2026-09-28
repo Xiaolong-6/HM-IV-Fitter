@@ -49,7 +49,7 @@ def test_graph_solver_failure_returns_nan(monkeypatch):
 def test_fit_trace_flags_nonfinite_graph_solver_prediction(monkeypatch):
     monkeypatch.setattr("ivfitter.core.fitting_engine.solve_graph_current", lambda voltage, model: (np.full(len(voltage), np.nan), {}))
     trace = TraceData(voltage_V=[0.0, 0.1, 0.2], current_A=[0.0, 1e-9, 2e-9])
-    model = ModelSpec(parallel=[ComponentSpec(id="R", location="parallel", function_type="constant_rs", placement="parallel_current_branch", params={"Rs_ohm": p(1e9)})])
+    model = ModelSpec(parallel=[ComponentSpec(id="R", location="parallel", function_type="constant_rs", evaluation_form="current_branch", placement="parallel_current_branch", params={"Rs_ohm": p(1e9)})])
     result = fitting_engine.fit_trace(FitRequest(trace=trace, model=model, config=FitConfig(solver_mode="graph_dc")))
     assert not result.success
     assert any(w.code == "graph_solver_kcl_failed" and w.severity == "error" for w in result.warnings)

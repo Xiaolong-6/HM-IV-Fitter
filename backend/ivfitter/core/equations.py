@@ -73,8 +73,55 @@ def _solution_line(model: ModelSpec) -> str:
     return f"How it is solved: for each V_ext, solve F(I)=I - Σ I_branch(V_ext - ΣV_drop(I)) = 0 using series terms [{series_ids}] and branch terms [{branch_ids}]."
 
 
+def _graph_component_line(comp) -> str:
+    metadata = getattr(comp, "metadata", {}) or {}
+    nickname = metadata.get("nickname") or comp.id
+    behavior = metadata.get("behavior") or comp.evaluation_form or "unspecified"
+    expression = str(metadata.get("expression", "")).strip()
+    params = ", ".join(
+        f"{getattr(spec, 'label', None) or name}={spec.value:g}{spec.unit or ''}"
+        for name, spec in comp.params.items()
+    ) or "none"
+    expression_text = f"; expression={expression}" if expression else ""
+    polarity = f"; polarity={comp.polarity}" if comp.polarity else ""
+    return (
+        f"{comp.id}: nick={nickname}; law={comp.law_id or comp.function_type}; "
+        f"behavior={behavior}; form={comp.evaluation_form or 'auto'}; "
+        f"placement={comp.placement}; nodes={comp.node_pos}->{comp.node_neg}"
+        f"{polarity}{expression_text}; parameters: {params}"
+    )
+
+
 def generate_equations(model: ModelSpec) -> EquationSummary:
-    """Generate display equations grouped by model role plus topology."""
+    """Generate display equations from the authoritative model representation."""
+    graph = model.graph if model.graph is not None and model.graph.components else None
+
+    if graph is not None:
+        eq = EquationSummary(
+            title="Graph-native DC IV model with explicit node topology",
+            voltage_relation=[
+                "Graph-native Model Builder topology is authoritative for fitting.",
+                "Component voltage: ΔV_m = V(node_pos) - V(node_neg).",
+                "For each external bias, internal node voltages are solved from KCL on the stored graph.",
+                "Terminal current is the net current entering/leaving the bias terminal after all active component laws are evaluated.",
+            ],
+            auxiliary=[
+                "Law = the component mathematical relation; behavior maps local V/I variables into that law.",
+                "Placement/form metadata describes evaluation semantics; stored graph nodes and edges define topology.",
+                *[_graph_component_line(comp) for comp in graph.components],
+            ],
+        )
+        # Keep compatibility-bucket law lines available for downstream readers,
+        # but do not use them to invent a replacement topology.
+        for comp in model.core:
+            eq.core.append(_law_line(comp))
+        for comp in model.series:
+            eq.series.append(_law_line(comp))
+        for comp in model.parallel:
+            eq.parallel.append(_law_line(comp))
+        eq.topology = graph_text_summary(graph)
+        return eq
+
     eq = EquationSummary(
         title="Composite IV model with Law / Form / Placement semantics",
         voltage_relation=[
@@ -98,6 +145,6 @@ def generate_equations(model: ModelSpec) -> EquationSummary:
         eq.series.append(_law_line(comp))
     for comp in model.parallel:
         eq.parallel.append(_law_line(comp))
-    graph = assemble_graph(model)
-    eq.topology = graph_text_summary(graph)
+    eq.topology = graph_text_summary(assemble_graph(model))
     return eq
+

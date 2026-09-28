@@ -1511,7 +1511,21 @@
 .compact-fit-setup-panel .fit-bottom-voltage { margin: 0; }
 .compact-fit-setup-panel .fit-bottom-voltage-title { display: none; }
 .compact-fit-setup-panel .fit-bottom-voltage-grid { display: grid; grid-template-columns: repeat(2, minmax(88px, 1fr)); gap: calc(6px * var(--app-zoom)); }
-.compact-fit-setup-panel .fit-config-message-stack { display: none; }
+.compact-fit-setup-panel .fit-config-message-stack {
+  display: grid;
+  gap: calc(3px * var(--app-zoom));
+  min-width: 0;
+}
+.compact-fit-setup-panel .fit-config-message-stack:empty {
+  display: none;
+}
+.compact-fit-setup-panel .fit-primary-message {
+  margin: 0;
+  padding: calc(4px * var(--app-zoom)) calc(7px * var(--app-zoom));
+  border-radius: calc(7px * var(--app-zoom));
+  font-size: calc(11px * var(--app-zoom));
+  line-height: 1.25;
+}
 .fit-advanced-popover-button {
   border: 1px solid var(--theme-border);
   background: #f8fafc;
@@ -1630,4 +1644,33 @@
 }
 .fit-report-inline.available:hover {
   background: #eff6ff !important;
+}
+
+
+/* Static-browser stabilization: compact empty Report action instead of a full-width bar. */
+.report-hero-section .compact-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(12px * var(--app-zoom));
+  padding-top: calc(2px * var(--app-zoom));
+}
+.report-hero-section .compact-empty-state p {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.report-hero-section .compact-empty-state .primary {
+  flex: 0 0 auto;
+  width: auto;
+  min-width: calc(132px * var(--app-zoom));
+  padding-inline: calc(16px * var(--app-zoom));
+}
+@media (max-width: 640px) {
+  .report-hero-section .compact-empty-state {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .report-hero-section .compact-empty-state .primary {
+    width: 100%;
+  }
 }

@@ -107,7 +107,7 @@ function residualLatex(branches: Term[]) {
 }
 function termMeaning(term: Term, language: Language) {
   const compSpec = termToComponentSpec(term);
-  return componentPhysicalRole(compSpec, language)[language === "zh" ? "zh" : "en"];
+  return componentPhysicalRole(compSpec, language)["en"];
 }
 function beginnerBranchMeaningLocal(term: Term, language: Language) {
   const compSpec = termToComponentSpec(term);
@@ -115,70 +115,117 @@ function beginnerBranchMeaningLocal(term: Term, language: Language) {
 }
 
 
-function FormulaCards({ series, branches, language }: { series: Term[]; branches: Term[]; language: Language }) {
-  const usesSoftplus = [...series, ...branches].some((term) => isSeriesPowerDrop(term) || isConductanceModifier(term) || isForwardPower(term) || isBreakdown(term) || isBiasDependentCurrent(term));
-  const zh = language === "zh";
-  return <>
-    <div className="equation-card formula-card user-facing-global-formula">
-      <h3>{zh ? "0. 等效 I–V 模型" : "0. Equivalent I–V model"}</h3>
-      <p className="equation-explain">{zh
-        ? "外加电压先经过主路压降变成结点电压；各支路在该结点电压下计算电流并求和。"
-        : "Applied voltage is converted to junction voltage after main-path drops. Branch currents are evaluated at that junction voltage and summed."}</p>
-      <div className="preview-formula-block global-formula-stack">
-        <div className="preview-formula-head"><strong>{zh ? "全局结构" : "Global structure"}</strong><span>{zh ? "主路 + 并联支路" : "main path + parallel branches"}</span></div>
-        <MathFormula latex={"V_j=V_{ext}-\\sum_k \\Delta V_k(I)"} />
-        <MathFormula latex={"I=\\sum_m I_m(V_j;\\theta_m)"} />
-        <MathFormula latex={"F(I;V_{ext})=I-\\sum_m I_m(V_j;\\theta_m)=0"} />
+function FormulaCards({
+  series,
+  branches,
+  language,
+}: {
+  series: Term[];
+  branches: Term[];
+  language: Language;
+}) {
+  const usesSoftplus = [...series, ...branches].some(
+    (term) =>
+      isSeriesPowerDrop(term) ||
+      isConductanceModifier(term) ||
+      isForwardPower(term) ||
+      isBreakdown(term) ||
+      isBiasDependentCurrent(term),
+  );
+  return (
+    <>
+      <div className="equation-card formula-card user-facing-global-formula">
+        <h3>0. Equivalent I–V model</h3>
+        <p className="equation-explain">
+          Applied voltage is converted to junction voltage after main-path drops.
+          Branch currents are evaluated at that junction voltage and summed.
+        </p>
+        <div className="preview-formula-block global-formula-stack">
+          <div className="preview-formula-head">
+            <strong>Global structure</strong>
+            <span>main path + parallel branches</span>
+          </div>
+          <MathFormula latex={"V_j=V_{ext}-\\sum_k \\Delta V_k(I)"} />
+          <MathFormula latex={"I=\\sum_m I_m(V_j;\\theta_m)"} />
+          <MathFormula latex={"F(I;V_{ext})=I-\\sum_m I_m(V_j;\\theta_m)=0"} />
+        </div>
       </div>
-    </div>
-    {usesSoftplus ? <div className="equation-card formula-card softplus-definition-card">
-      <h3>{zh ? "Softplus 定义" : "Softplus definition"}</h3>
-      <p className="equation-explain">{zh ? "Softplus 是平滑阈值函数。低于阈值时接近零，高于阈值后近似线性增长，因此模型不会出现尖锐折角。" : "Softplus is a smooth threshold function. It stays near zero below the threshold and grows almost linearly above it, so the model avoids a sharp corner."}</p>
-      <div className="preview-formula-block">
-        <div className="preview-formula-head"><strong>{zh ? "数学定义" : "Mathematical definition"}</strong></div>
-        <MathFormula latex={"\\operatorname{softplus}(x)=\\ln(1+\\exp(x))"} />
+
+      {usesSoftplus ? (
+        <div className="equation-card formula-card softplus-definition-card">
+          <h3>Softplus definition</h3>
+          <p className="equation-explain">
+            Softplus is a smooth threshold function. It stays near zero below the
+            threshold and grows almost linearly above it, so the model avoids a
+            sharp corner.
+          </p>
+          <div className="preview-formula-block">
+            <div className="preview-formula-head">
+              <strong>Mathematical definition</strong>
+            </div>
+            <MathFormula latex={"\\operatorname{softplus}(x)=\\ln(1+\\exp(x))"} />
+          </div>
+        </div>
+      ) : null}
+
+      <div className="equation-card formula-card">
+        <h3>1. Junction voltage</h3>
+        <p className="equation-explain">
+          Start with the externally applied voltage, then subtract main-path
+          voltage losses. The branches below see the remaining junction voltage Vj.
+        </p>
+        <div className="preview-formula-block">
+          <div className="preview-formula-head">
+            <strong>Voltage seen by junction branches</strong>
+          </div>
+          <MathFormula latex={seriesDropLatex(series)} />
+        </div>
       </div>
-    </div> : null}
-    <div className="equation-card formula-card">
-      <h3>{zh ? "1. 结点电压" : "1. Junction voltage"}</h3>
-      <p className="equation-explain">{zh
-        ? "从用户施加的外部电压开始，扣除主路中的串联压降。剩余的结点电压 Vj 是下面所有支路共同看到的电压。"
-        : "Start with the externally applied voltage, then subtract main-path voltage losses. The branches below see the remaining junction voltage Vj."}</p>
-      <div className="preview-formula-block">
-        <div className="preview-formula-head"><strong>{zh ? "支路看到的电压" : "Voltage seen by junction branches"}</strong></div>
-        <MathFormula latex={seriesDropLatex(series)} />
+
+      <div className="equation-card formula-card">
+        <h3>2. Branch currents</h3>
+        <p className="equation-explain">
+          Each branch calculates a current from Vj. The terminal current is the
+          sum of all active branch currents.
+        </p>
+        <div className="preview-formula-block">
+          <div className="preview-formula-head">
+            <strong>Total current</strong>
+          </div>
+          <MathFormula latex={totalCurrentLatex(branches)} />
+        </div>
+        <div className="branch-formula-list">
+          {branches.map((b) => (
+            <div className="preview-formula-block" key={b.id}>
+              <div className="preview-formula-head">
+                <strong>{b.nick}</strong>
+                <span>{beginnerBranchMeaningLocal(b, language)}</span>
+              </div>
+              <MathFormula latex={branchCurrentLatex(b)} />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
-    <div className="equation-card formula-card">
-      <h3>{zh ? "2. 支路电流" : "2. Branch currents"}</h3>
-      <p className="equation-explain">{zh
-        ? "每条支路根据同一个 Vj 计算自己的电流。端口电流是所有有效支路电流的和。"
-        : "Each branch calculates a current from Vj. The terminal current is the sum of all active branch currents."}</p>
-      <div className="preview-formula-block">
-        <div className="preview-formula-head"><strong>{zh ? "总电流" : "Total current"}</strong></div>
-        <MathFormula latex={totalCurrentLatex(branches)} />
+
+      <div className="equation-card formula-card wide-equation">
+        <h3>3. Combined equation for this model</h3>
+        <p className="equation-explain">
+          Branch formulas substituted into a single model equation.
+        </p>
+        <div className="preview-formula-block">
+          <div className="preview-formula-head">
+            <strong>Single-equation view</strong>
+          </div>
+          <MathFormula latex={concreteLatex(series, branches)} />
+        </div>
       </div>
-      <div className="branch-formula-list">{branches.map((b) => <div className="preview-formula-block" key={b.id}>
-        <div className="preview-formula-head"><strong>{b.nick}</strong><span>{beginnerBranchMeaningLocal(b, language)}</span></div>
-        <MathFormula latex={branchCurrentLatex(b)} />
-      </div>)}</div>
-    </div>
-    <div className="equation-card formula-card wide-equation">
-      <h3>{zh ? "3. 当前模型的合并方程" : "3. Combined equation for this model"}</h3>
-      <p className="equation-explain">{zh
-        ? "将支路公式代入总电流关系，得到单方程视图。"
-        : "Branch formulas substituted into a single model equation."}</p>
-      <div className="preview-formula-block">
-        <div className="preview-formula-head"><strong>{zh ? "单方程视图" : "Single-equation view"}</strong></div>
-        <MathFormula latex={concreteLatex(series, branches)} />
-      </div>
-    </div>
-  </>;
+    </>
+  );
 }
 function SolverCard({ series, branches, language }: { series: Term[]; branches: Term[]; language: Language }) {
   return <div className="equation-card solver-card">
-    <h3>{language === "zh" ? "4. 拟合残差" : "4. Fit residual"}</h3>
-    <p className="equation-explain">{language === "zh" ? "对每个外加电压点，求解使残差为零的电流。" : "For each applied voltage, the solver finds the current that makes this residual zero."}</p>
+    <h3>{"4. Fit residual"}</h3>
+    <p className="equation-explain">{"For each applied voltage, the solver finds the current that makes this residual zero."}</p>
     <MathFormula latex={residualLatex(branches)} />
     <div className="chip-row"><strong>{t(language, "mainPath")}</strong>{series.map((s) => <span className="mini-chip" key={s.id}>{s.nick}</span>)}</div>
     <div className="chip-row"><strong>{t(language, "branches")}</strong>{branches.map((b) => <span className="mini-chip" key={b.id}>{b.nick}</span>)}</div>
@@ -187,8 +234,8 @@ function SolverCard({ series, branches, language }: { series: Term[]; branches: 
 function CurrentValuesCard({ model, result, language }: { model: ModelSpec; result?: FitResult | null; language: Language }) {
   const rows = parameterValueRows(model, result ?? null);
   return <div className="equation-card current-values-card">
-    <h3>{language === "zh" ? "当前参数值" : "Current parameter values"}</h3>
-    <p className="equation-explain">{language === "zh" ? "这些数值会代入上面的公式；运行拟合后这里显示拟合值，拟合前显示初始值。" : "These values plug into the formulas above. Before fitting they are initial values; after fitting they are fitted values."}</p>
+    <h3>{"Current parameter values"}</h3>
+    <p className="equation-explain">{"These values plug into the formulas above. Before fitting they are initial values; after fitting they are fitted values."}</p>
     <div className="parameter-chip-grid">
       {rows.map((row) => <span className="parameter-chip" key={row.key}>
         <strong>{row.label}</strong>
@@ -199,11 +246,11 @@ function CurrentValuesCard({ model, result, language }: { model: ModelSpec; resu
 }
 function ComponentRows({ terms, language }: { terms: Term[]; language: Language }) {
   return <div className="equation-card component-card">
-    <h3>{language === "zh" ? "元件含义" : "Component meaning"}</h3>
+    <h3>{"Component meaning"}</h3>
     <div className="component-table readable-component-table">
       {terms.map((term) => <div className="component-row readable-component-row" key={`${term.id}-${term.row}`}>
         <span className="component-group"><strong>{term.nick}</strong></span>
-        <span className="component-readable"><em>{termMeaning(term, language)}</em><small>{term.polarity ? (language === "zh" ? `极性：${term.polarity}` : `Polarity: ${term.polarity}`) : (language === "zh" ? "技术细节可在帮助页查看。" : "Technical law/form/placement details are available in Help.")}</small></span>
+        <span className="component-readable"><em>{termMeaning(term, language)}</em><small>{term.polarity ? (`Polarity: ${term.polarity}`) : ("Technical law/form/placement details are available in Help.")}</small></span>
       </div>)}
     </div>
   </div>;

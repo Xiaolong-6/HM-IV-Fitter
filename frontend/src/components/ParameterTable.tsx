@@ -29,6 +29,7 @@ import {
   buildParameterRows,
   componentDisplayTag,
   componentLawFormPlacement,
+  fittedParameterForModelParameter,
   groupParameterRows,
   parameterKey,
   placementGroupTitle,
@@ -167,18 +168,18 @@ function nickname(comp: ComponentSpec) {
 function componentSummary(comp: ComponentSpec, language: Language) {
   const location =
     comp.placement?.includes("series") || comp.location === "series"
-      ? language === "zh" ? "主路" : "main path"
-      : language === "zh" ? "电流支路" : "current branch";
+      ? "main path"
+      : "current branch";
   const role =
     comp.function_type === "diode" || /shockley/i.test(comp.law_id ?? "")
-      ? language === "zh" ? "Shockley 二极管" : "Shockley diode"
+      ? "Shockley diode"
       : /ohmic/i.test(comp.law_id ?? "")
         ? comp.location === "series"
-          ? language === "zh" ? "欧姆串联电阻" : "Ohmic series resistance"
-          : language === "zh" ? "欧姆漏电/旁路" : "Ohmic leakage/shunt"
+          ? "Ohmic series resistance"
+          : "Ohmic leakage/shunt"
         : comp.function_type === "series_diode_barrier"
-          ? language === "zh" ? "类二极管串联势垒压降" : "diode-like series barrier drop"
-          : language === "zh" ? "经验模型项" : "empirical model term";
+          ? "diode-like series barrier drop"
+          : "empirical model term";
   return `${role} · ${location}`;
 }
 
@@ -186,63 +187,39 @@ function parameterMeaningFromSpec(
   comp: ComponentSpec,
   paramName: string,
   spec: ParameterSpec,
-  language: Language,
+  _language: Language,
 ) {
   const label = spec.label ?? paramName;
   const componentName = nickname(comp);
-  const en = (text: string, zh: string) => (language === "zh" ? zh : text);
-  let base = "";
   if (/^n$/i.test(paramName)) {
-    base = en(
-      `Ideality factor for ${componentName}. Controls diode-like exponential steepness. Typical: 1-2.`,
-      `${componentName} 的理想因子，控制类二极管指数开启的陡峭程度。典型值约 1-2。`,
-    );
-  } else if (/I0|I_?0/i.test(paramName) || /I0/i.test(label)) {
-    base = en(
-      `Saturation current scale for ${componentName}. May span many decades.`,
-      `${componentName} 的电流尺度。可能跨很多数量级。`,
-    );
-  } else if (/Rs_ohm|^Rs$/i.test(paramName) || /^rs$/i.test(componentName)) {
-    base = en(
-      `Series resistance for ${componentName}. Controls high-current voltage loss.`,
-      `${componentName} 的串联电阻，控制大电流区压降。`,
-    );
-  } else if (/Rsh|Rsh_ohm/i.test(paramName) || /rsh|shunt/i.test(componentName)) {
-    base = en(
-      `Shunt/leakage resistance for ${componentName}. Smaller = stronger leakage.`,
-      `${componentName} 的并联/漏电电阻；越小漏电越强。`,
-    );
-  } else if (/Vt|Vbr/i.test(paramName)) {
-    base = en(
-      `Threshold voltage for ${componentName}.`,
-      `${componentName} 的阈值电压。`,
-    );
-  } else if (/Vs|w_V/i.test(paramName)) {
-    base = en(
-      `Voltage softness/scale for ${componentName}.`,
-      `${componentName} 的电压软化/尺度参数。`,
-    );
-  } else if (/^A$|Aph|amplitude|scale/i.test(paramName)) {
-    base = en(
-      `Amplitude scale for ${componentName}.`,
-      `${componentName} 的幅值尺度。`,
-    );
-  } else if (/gain/i.test(paramName)) {
-    base = en(
-      `Bias coefficient for ${componentName}.`,
-      `${componentName} 的偏压系数。`,
-    );
-  } else if (/direction_sign/i.test(paramName)) {
-    base = en(
-      `Direction sign for ${componentName}.`,
-      `${componentName} 的方向符号。`,
-    );
-  } else {
-    base = spec.description || en(`Parameter ${label} for ${componentName}.`, `${componentName} 的参数 ${label}。`);
+    return `Ideality factor for ${componentName}. Controls diode-like exponential steepness. Typical: 1-2.`;
   }
-  return base;
+  if (/I0|I_?0/i.test(paramName) || /I0/i.test(label)) {
+    return `Saturation current scale for ${componentName}. May span many decades.`;
+  }
+  if (/Rs_ohm|^Rs$/i.test(paramName) || /^rs$/i.test(componentName)) {
+    return `Series resistance for ${componentName}. Controls high-current voltage loss.`;
+  }
+  if (/Rsh|Rsh_ohm/i.test(paramName) || /rsh|shunt/i.test(componentName)) {
+    return `Shunt/leakage resistance for ${componentName}. Smaller = stronger leakage.`;
+  }
+  if (/Vt|Vbr/i.test(paramName)) {
+    return `Threshold voltage for ${componentName}.`;
+  }
+  if (/Vs|w_V/i.test(paramName)) {
+    return `Voltage softness/scale for ${componentName}.`;
+  }
+  if (/^A$|Aph|amplitude|scale/i.test(paramName)) {
+    return `Amplitude scale for ${componentName}.`;
+  }
+  if (/gain/i.test(paramName)) {
+    return `Bias coefficient for ${componentName}.`;
+  }
+  if (/direction_sign/i.test(paramName)) {
+    return `Direction sign for ${componentName}.`;
+  }
+  return spec.description || `Parameter ${label} for ${componentName}.`;
 }
-
 
 export function ParameterTable({
   result,
@@ -354,7 +331,12 @@ export function ParameterTable({
                           </tr>
                           {group.rows.map(({ location, component: comp, paramName, spec }) => {
                             const key = parameterKey(comp.id, paramName);
-                            const fitted = result?.parameters[key];
+                            const fitted = fittedParameterForModelParameter(
+                              model,
+                              result,
+                              comp.id,
+                              paramName,
+                            );
                             const meaning = result
                               ? parameterMeaning(result, key, language)
                               : parameterMeaningFromSpec(comp, paramName, spec, language);

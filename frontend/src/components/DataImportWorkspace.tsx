@@ -102,7 +102,7 @@ function DatasetNameInput({
   return (
     <input
       value={draft}
-      aria-label={language === "zh" ? "Trace 名称" : "Trace name"}
+      aria-label={"Trace name"}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={commit}
       onKeyDown={(event) => {
@@ -183,9 +183,7 @@ export function DataImportWorkspace({
   const voltageUnit = String(selected?.metadata?.voltage_unit ?? "V");
   const currentUnit = String(selected?.metadata?.current_unit ?? "A");
   const unitHelp =
-    language === "zh"
-      ? "选择原始导入列的实际单位。数据会立即换算成 V/A 用于预览、绘图和拟合。"
-      : "Select the actual unit of the imported column. Data is immediately converted to V/A for preview, plots, and fitting.";
+    "Select the actual unit of the imported column. Data is immediately converted to V/A for preview, plots, and fitting.";
   const [previewSearch, setPreviewSearch] = useState("");
   const appendNextImportRef = useRef(false);
   const isErrorMessage = Boolean(
@@ -267,9 +265,7 @@ export function DataImportWorkspace({
     );
     if (!imported.length)
       throw new Error(
-        language === "zh"
-          ? "未找到可导入的有限 V/I 数据。"
-          : "No finite V/I traces were imported.",
+        "No finite V/I traces were imported.",
       );
     return imported;
   }
@@ -506,15 +502,11 @@ export function DataImportWorkspace({
     try {
       await navigator.clipboard?.writeText(text);
       setMessage(
-        language === "zh"
-          ? "已复制当前预览数据。"
-          : "Visible preview rows copied.",
+        "Visible preview rows copied.",
       );
     } catch {
       setMessage(
-        language === "zh"
-          ? "复制失败：浏览器未开放剪贴板权限。"
-          : "Copy failed: clipboard permission is unavailable.",
+        "Copy failed: clipboard permission is unavailable.",
       );
     }
   }
@@ -557,7 +549,7 @@ export function DataImportWorkspace({
         {showImportControls ? (
           <section className="card import-actions-card data-source-card webpage-panel">
             <div className="card-head">
-              <h3>{language === "zh" ? "导入数据" : "Import data"}</h3>
+              <h3>{"Import data"}</h3>
               <HelpTip text={t(language, "importCsvHelp")} />
               {hasData && importExpanded ? (
                 <button
@@ -565,7 +557,7 @@ export function DataImportWorkspace({
                   className="ghost small"
                   onClick={() => setImportExpanded(false)}
                 >
-                  {language === "zh" ? "折叠" : "Collapse"}
+                  {"Collapse"}
                 </button>
               ) : null}
             </div>
@@ -574,14 +566,14 @@ export function DataImportWorkspace({
               <div
                 className="data-source-tabs"
                 role="tablist"
-                aria-label={language === "zh" ? "数据来源" : "Data source"}
+                aria-label={"Data source"}
               >
                 <button
                   type="button"
                   className={inputMode === "upload" ? "active" : ""}
                   onClick={() => setInputMode("upload")}
                 >
-                  {language === "zh" ? "上传 CSV/TXT" : "Upload CSV/TXT"}
+                  {"Upload CSV/TXT"}
                 </button>
                 <button
                   type="button"
@@ -595,7 +587,7 @@ export function DataImportWorkspace({
                   className={inputMode === "sample" ? "active" : ""}
                   onClick={() => setInputMode("sample")}
                 >
-                  {language === "zh" ? "示例数据" : "Sample data"}
+                  {"Sample data"}
                 </button>
               </div>
               {inputMode === "upload" ? (
@@ -624,9 +616,7 @@ export function DataImportWorkspace({
                     }
                   />
                   <span>
-                    {language === "zh"
-                      ? "也可以把 CSV/TXT/DAT 文件拖到这里。"
-                      : "Or drag a CSV/TXT/DAT file here."}
+                    {"Or drag a CSV/TXT/DAT file here."}
                   </span>
                 </div>
               ) : null}
@@ -651,16 +641,14 @@ export function DataImportWorkspace({
               {inputMode === "sample" ? (
                 <div className="sample-import-panel">
                   <p className="muted">
-                    {language === "zh"
-                      ? "加载内置示例数据用于练习导入、选择 trace 和拟合流程。"
-                      : "Load the bundled sample dataset for practicing trace selection and fitting workflow."}
+                    {"Load the bundled sample dataset for practicing trace selection and fitting workflow."}
                   </p>
                   <button
                     className="import-debug-action"
                     title={t(language, "loadDemoHelp")}
                     onClick={loadSampleData}
                   >
-                    {language === "zh" ? "加载示例数据" : "Load sample data"}
+                    {"Load sample data"}
                   </button>
                 </div>
               ) : null}
@@ -669,20 +657,18 @@ export function DataImportWorkspace({
         ) : (
           <section
             className="import-loaded-bar webpage-panel"
-            aria-label={language === "zh" ? "导入摘要" : "Import summary"}
+            aria-label={"Import summary"}
           >
             <div className="import-loaded-summary">
               <span className="import-status-pill">
-                {language === "zh" ? "已载入" : "Loaded"}
+                {"Loaded"}
               </span>
               <strong>
-                {language === "zh"
-                  ? `${traces.length} 条 trace · ${totalPoints} 点`
-                  : `${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${totalPoints} points`}
+                {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${totalPoints} points`}
               </strong>
               <span className="muted">
                 {selectedSource
-                  ? `${language === "zh" ? "来源" : "Source"}: ${selectedSource}`
+                  ? `${"Source"}: ${selectedSource}`
                   : ""}
               </span>
             </div>
@@ -692,14 +678,14 @@ export function DataImportWorkspace({
                 className="ghost small"
                 onClick={reopenImportOptions}
               >
-                {language === "zh" ? "重新打开导入" : "Reopen import"}
+                {"Reopen import"}
               </button>
               <button
                 type="button"
                 className="ghost small"
                 onClick={addMoreFile}
               >
-                {language === "zh" ? "追加文件" : "Add more"}
+                {"Add more"}
               </button>
             </div>
             <input
@@ -719,7 +705,7 @@ export function DataImportWorkspace({
           <section className="card trace-selection-card webpage-panel compact-trace-selection-card trace-control-card">
             <div className="trace-control-row">
               <label className="trace-select-label structured-trace-select">
-                <span>{language === "zh" ? "Trace" : "Trace"}</span>
+                <span>{"Trace"}</span>
                 <select
                   title={t(language, "selectedTraceHelp")}
                   value={selected?.trace_id ?? ""}
@@ -733,7 +719,7 @@ export function DataImportWorkspace({
                 </select>
               </label>
               <label className="trace-name-inline">
-                <span>{language === "zh" ? "名称" : "Name"}</span>
+                <span>{"Name"}</span>
                 <DatasetNameInput
                   value={selected?.trace_id ?? ""}
                   language={language}
@@ -741,10 +727,10 @@ export function DataImportWorkspace({
                 />
               </label>
               <div className="unit-inline-group" title={unitHelp}>
-                <span>{language === "zh" ? "单位" : "Units"}</span>
+                <span>{"Units"}</span>
                 <div className="unit-control-fields">
                   <select
-                    aria-label={language === "zh" ? "电压单位" : "Voltage unit"}
+                    aria-label={"Voltage unit"}
                     value={voltageUnit}
                     onChange={(e) => changeUnit("voltage", e.target.value)}
                   >
@@ -755,7 +741,7 @@ export function DataImportWorkspace({
                     ))}
                   </select>
                   <select
-                    aria-label={language === "zh" ? "电流单位" : "Current unit"}
+                    aria-label={"Current unit"}
                     value={currentUnit}
                     onChange={(e) => changeUnit("current", e.target.value)}
                   >
@@ -768,9 +754,7 @@ export function DataImportWorkspace({
                 </div>
               </div>
               <span className="trace-count-pill compact-data-pill">
-                {language === "zh"
-                  ? `${traces.length} 条 trace · ${selectedPoints} 点`
-                  : `${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${selectedPoints} points`}
+                {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${selectedPoints} points`}
               </span>
               {onNextToFitting ? (
                 <button
@@ -778,7 +762,7 @@ export function DataImportWorkspace({
                   className="primary data-next-action compact-next-action"
                   onClick={onNextToFitting}
                 >
-                  {language === "zh" ? "模型构建 →" : "Model Builder →"}
+                  {"Model Builder →"}
                 </button>
               ) : null}
             </div>
@@ -788,12 +772,10 @@ export function DataImportWorkspace({
         {hasData ? (
           <section className="card plot-review-card webpage-panel">
             <div className="card-head">
-              <h3>{language === "zh" ? "Plot review" : "Plot review"}</h3>
+              <h3>{"Plot review"}</h3>
               <HelpTip
                 text={
-                  language === "zh"
-                    ? "快速检查当前导入 trace 的线性和对数 I-V。"
-                    : "Quickly inspect the selected trace before fitting."
+                  "Quickly inspect the selected trace before fitting."
                 }
               />
             </div>
@@ -809,7 +791,7 @@ export function DataImportWorkspace({
             </div>
             <div className="spreadsheet-toolbar">
               <select
-                aria-label={language === "zh" ? "快速定位 trace group" : "Jump to trace group"}
+                aria-label={"Jump to trace group"}
                 defaultValue=""
                 onChange={(event) => {
                   if (event.target.value) jumpToPreviewTrace(event.target.value);
@@ -817,7 +799,7 @@ export function DataImportWorkspace({
                 }}
               >
                 <option value="">
-                  {language === "zh" ? "跳转到 trace…" : "Jump to trace…"}
+                  {"Jump to trace…"}
                 </option>
                 {traces.map((trace) => (
                   <option key={trace.trace_id} value={trace.trace_id}>
@@ -829,7 +811,7 @@ export function DataImportWorkspace({
                 value={previewSearch}
                 onChange={(event) => setPreviewSearch(event.target.value)}
                 placeholder={
-                  language === "zh" ? "搜索行 / trace" : "Search row / trace"
+                  "Search row / trace"
                 }
               />
               <button
@@ -837,14 +819,14 @@ export function DataImportWorkspace({
                 className="ghost small"
                 onClick={copyVisiblePreview}
               >
-                {language === "zh" ? "复制可见行" : "Copy visible"}
+                {"Copy visible"}
               </button>
               <button
                 type="button"
                 className="ghost small"
                 onClick={exportVisiblePreview}
               >
-                {language === "zh" ? "导出 CSV" : "Export CSV"}
+                {"Export CSV"}
               </button>
             </div>
             <div
@@ -870,7 +852,7 @@ export function DataImportWorkspace({
                       >
                         <span>{group.trace.trace_id}</span>
                         <small>
-                          {group.pointCount} {language === "zh" ? "点" : "points"}
+                          {group.pointCount} {"points"}
                         </small>
                       </th>
                     ))}

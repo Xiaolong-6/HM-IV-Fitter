@@ -122,6 +122,184 @@ function graphEvaluationForm(behavior: Mb3Behavior): EvaluationForm {
   return "current_branch";
 }
 
+const GRAPH_EXPRESSION_FUNCTIONS = new Set([
+  "abs",
+  "sign",
+  "sqrt",
+  "exp",
+  "log",
+  "log10",
+  "log1p",
+  "softplus",
+  "sp",
+  "sigmoid",
+  "S",
+  "minimum",
+  "maximum",
+  "min",
+  "max",
+  "clip",
+  "sin",
+  "cos",
+  "tan",
+  "tanh",
+]);
+
+const GRAPH_EXPRESSION_VARIABLES = new Set([
+  "V",
+  "dV",
+  "I",
+  "absV",
+  "absI",
+  "Vt",
+  "Vt_V",
+  "kB",
+  "T",
+]);
+
+const GRAPH_RESERVED_PARAMETER_NAMES = new Set([
+  "V",
+  "dV",
+  "I",
+  "absV",
+  "absI",
+  "kB",
+  ...GRAPH_EXPRESSION_FUNCTIONS,
+]);
+
+function expressionIdentifiers(expression: string) {
+  return [...new Set(expression.match(/\b[A-Za-z_]\w*\b/g) ?? [])];
+}
+
+function componentContractWarnings(components: Mb3Component[]): string[] {
+  const warnings: string[] = [];
+  const temperatures: Array<{ id: string; value: number }> = [];
+
+  for (const component of components) {
+    const label = component.label || component.id;
+    const symbols = component.parameters.map((parameter) => parameter.symbol.trim());
+    const duplicateSymbols = symbols.filter(
+      (symbol, index) => symbol && symbols.indexOf(symbol) !== index,
+    );
+    if (duplicateSymbols.length) {
+      warnings.push(
+        `${label}: duplicate parameter symbol(s): ${[
+          ...new Set(duplicateSymbols),
+        ].join(", ")}.`,
+      );
+    }
+    if (symbols.some((symbol) => !symbol)) {
+      warnings.push(`${label}: parameter symbols cannot be empty.`);
+    }
+
+    const reserved = symbols.filter((symbol) =>
+      GRAPH_RESERVED_PARAMETER_NAMES.has(symbol),
+    );
+    if (reserved.length) {
+      warnings.push(
+        `${label}: parameter name(s) reserved by the solver: ${[
+          ...new Set(reserved),
+        ].join(", ")}.`,
+      );
+    }
+
+    const knownIdentifiers = new Set([
+      ...symbols,
+      ...GRAPH_EXPRESSION_FUNCTIONS,
+      ...GRAPH_EXPRESSION_VARIABLES,
+    ]);
+    const unknown = expressionIdentifiers(component.expression).filter(
+      (identifier) => !knownIdentifiers.has(identifier),
+    );
+    if (!component.expression.trim()) {
+      warnings.push(`${label}: expression cannot be empty.`);
+    } else if (unknown.length) {
+      warnings.push(
+        `${label}: expression references unknown symbol(s): ${unknown.join(", ")}.`,
+      );
+    }
+
+    for (const parameter of component.parameters) {
+      if (!Number.isFinite(parameter.value)) {
+        warnings.push(`${label}.${parameter.symbol}: value must be finite.`);
+      }
+      if (
+        parameter.lower != null &&
+        parameter.upper != null &&
+        parameter.lower > parameter.upper
+      ) {
+        warnings.push(
+          `${label}.${parameter.symbol}: lower bound must not exceed upper bound.`,
+        );
+      }
+      if (
+        parameter.lower != null &&
+        parameter.value < parameter.lower
+      ) {
+        warnings.push(
+          `${label}.${parameter.symbol}: value is below its lower bound.`,
+        );
+      }
+      if (
+        parameter.upper != null &&
+        parameter.value > parameter.upper
+      ) {
+        warnings.push(
+          `${label}.${parameter.symbol}: value is above its upper bound.`,
+        );
+      }
+    }
+
+    if (component.templateKey === "resistance") {
+      const resistance = component.parameters[0];
+      if (resistance && resistance.value <= 0) {
+        warnings.push(`${label}: resistance must be greater than 0 ohm.`);
+      }
+      if (
+        resistance?.fit &&
+        (resistance.lower == null || resistance.lower <= 0)
+      ) {
+        warnings.push(
+          `${label}: fitted resistance requires a strictly positive lower bound.`,
+        );
+      }
+    }
+
+    const temperature = parameterBySymbol(component, "T");
+    if (temperature) {
+      if (temperature.fit) {
+        warnings.push(
+          `${label}.T must remain fixed; fitting uses one shared device temperature.`,
+        );
+      }
+      if (temperature.value <= 0) {
+        warnings.push(`${label}.T must be greater than 0 K.`);
+      } else {
+        temperatures.push({ id: label, value: temperature.value });
+      }
+    }
+  }
+
+  if (temperatures.length > 1) {
+    const reference = temperatures[0].value;
+    const differing = temperatures.filter(
+      ({ value }) => Math.abs(value - reference) > 1e-12,
+    );
+    if (differing.length) {
+      warnings.push(
+        `All temperature-bearing components must share one T; ${[
+          temperatures[0],
+          ...differing,
+        ]
+          .map(({ id, value }) => `${id}=${value} K`)
+          .join(", ")}.`,
+      );
+    }
+  }
+
+  return warnings;
+}
+
 function addUndirected(adjacency: Map<string, Set<string>>, a: string, b: string) {
   if (!adjacency.has(a)) adjacency.set(a, new Set());
   if (!adjacency.has(b)) adjacency.set(b, new Set());
@@ -230,12 +408,11 @@ function legacyComponent(component: Mb3Component, isSeriesBridge: boolean): Comp
       law_id: "ohmic",
       evaluation_form: "voltage_drop",
       placement: "series_voltage_drop",
-      polarity: "forward",
       params: {
         Rs_ohm: parameterSpecFor(component, component.parameters[0]?.symbol ?? "R0", {
           symbol: "R0",
           value: 10,
-          lower: 0,
+          lower: 1e-12,
           upper: 1e9,
           fit: true,
           unit: "ohm",
@@ -253,7 +430,6 @@ function legacyComponent(component: Mb3Component, isSeriesBridge: boolean): Comp
       law_id: "ohmic",
       evaluation_form: "current_branch",
       placement: "parallel_current_branch",
-      polarity: "forward",
       params: {
         Rsh_ohm: parameterSpecFor(component, component.parameters[0]?.symbol ?? "R0", {
           symbol: "R0",
@@ -559,6 +735,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
   const rootForPort = (ref: Mb3PortRef) => dsu.find(portKey(ref));
   const positiveRoot = dsu.find(`node:${graph.terminals.positive}`);
   const groundRoot = dsu.find(`node:${graph.terminals.ground}`);
+  const errors: string[] = [];
   const warnings: string[] = [];
   const componentAdjacency = new Map<string, Set<string>>();
 
@@ -624,6 +801,8 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
         );
       })
     : [];
+
+  errors.push(...componentContractWarnings(activeComponents));
 
   const openComponents = graph.components.filter((component) => {
     const hasPositiveWire = graph.wires.some((wire) =>
@@ -780,6 +959,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
     activeComponentIds: activeComponents.map((component) => component.id),
     activeWireIds,
     model,
+    errors,
     warnings,
     formulaLatex,
     formulaSections,

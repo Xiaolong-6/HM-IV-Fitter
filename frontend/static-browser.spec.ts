@@ -83,6 +83,16 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
       version: "static-browser-smoke",
     };
 
+    const validation = await call<
+      Array<{ code: string; severity: string; message: string }>
+    >("validate_model", {
+      core: [],
+      series: [],
+      parallel: [],
+      temperature_K: 0,
+      version: "static-browser-invalid-model",
+    });
+
     const fit = await call<{
       success: boolean;
       parameters: Record<string, { value: number }>;
@@ -102,26 +112,60 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
       },
     });
 
+    const failedModel = structuredClone(model);
+    failedModel.parallel[0].params.Rsh_ohm.value = 0;
+    failedModel.parallel[0].params.Rsh_ohm.lower = 1;
+    const failedFit = await call<{
+      success: boolean;
+      warnings: Array<{ code: string; severity: string }>;
+    }>("fit", {
+      trace: imported.traces[0].trace,
+      model: failedModel,
+      config: {
+        weighting: "linear",
+        loss: "linear",
+        fit_speed: "standard",
+        exclude_compliance: false,
+        max_nfev: 20,
+        multistart_enabled: false,
+        run_timeout_s: 5,
+        solver_mode: "legacy_composite",
+      },
+    });
+
     const report = await call<{ markdown: string }>("export_report", fit);
+    const reportCsv = await call<{ text: string }>("export_report_csv", fit);
 
     worker.terminate();
 
     return {
       hasDiode: registry.some((item) => item.function_type === "diode"),
       importedPoints: imported.traces[0].trace.voltage_V.length,
+      invalidModelRejected: validation.some(
+        (warning) =>
+          warning.code === "nonpositive_temperature" &&
+          warning.severity === "error",
+      ),
       fitSuccess: fit.success,
+      failedFitRejected: !failedFit.success && failedFit.warnings.some(
+        (warning) => warning.severity === "error",
+      ),
       fittedResistance: fit.parameters["Rsh.Rsh_ohm"]?.value,
       fittedPoints: fit.curves.current_fit_A.length,
       reportHeading: report.markdown.includes("# IV-fitter Web report"),
+      reportCsvHasParameter: reportCsv.text.includes("Rsh.Rsh_ohm"),
     };
   });
 
   expect(result.hasDiode).toBe(true);
   expect(result.importedPoints).toBe(5);
+  expect(result.invalidModelRejected).toBe(true);
   expect(result.fitSuccess).toBe(true);
+  expect(result.failedFitRejected).toBe(true);
   expect(Math.abs((result.fittedResistance ?? 0) - 1000)).toBeLessThan(0.1);
   expect(result.fittedPoints).toBe(5);
   expect(result.reportHeading).toBe(true);
+  expect(result.reportCsvHasParameter).toBe(true);
 });
 
 
@@ -139,6 +183,16 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await expect(workflow.getByRole("button", { name: "4 Report" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Start" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Help" })).toHaveCount(0);
+  await expect(page.locator(".workflow-top-utilities")).toHaveCount(0);
+  await expect(page.locator(".workflow-language-control")).toHaveCount(0);
+  await expect(page.locator(".workflow-zoom-control")).toHaveCount(0);
+  await expect(page.locator(".workflow-version")).toHaveCount(0);
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+  await expect(page.getByText("Warnings and diagnostics")).toHaveCount(0);
+  await workflow.getByRole("button", { name: "1 Import data" }).click();
 
   await page.getByRole("button", { name: "Sample data" }).click();
   await page.getByRole("button", { name: "Load sample data" }).click();
@@ -154,15 +208,29 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
     fullPage: true,
   });
 
+  await workflow.getByRole("button", { name: "3 Fit" }).click();
+  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  const emptyRunFit = page.getByRole("button", { name: "Run fit" });
+  await expect(emptyRunFit).toBeDisabled();
+  await expect(page.getByText("No runnable model.")).toBeVisible();
+
   await workflow.getByRole("button", { name: "2 Model builder" }).click();
   await expect(page.locator(".mbv3-direct-page")).toBeVisible();
+  await page.getByRole("button", { name: "Model presets" }).click();
+  await page.getByText("Single diode model", { exact: true }).click();
+  const useModel = page.getByRole("button", { name: "Use model for fitting" });
+  await expect(useModel).toBeEnabled();
   await page.screenshot({
     path: "test-results/four-step-model.png",
     fullPage: true,
   });
+  await useModel.click();
 
-  await workflow.getByRole("button", { name: "3 Fit" }).click();
   await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  const runFit = page.getByRole("button", { name: "Run fit" });
+  await expect(runFit).toBeEnabled();
+  await expect(page.locator(".plot-grid.single-plot")).toBeVisible();
+  await expect(page.locator(".plot-grid.paired-plot")).toHaveCount(0);
   await page.screenshot({
     path: "test-results/four-step-fit.png",
     fullPage: true,
@@ -170,8 +238,277 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
 
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
   await page.screenshot({
     path: "test-results/four-step-report.png",
     fullPage: true,
   });
+
+  await workflow.getByRole("button", { name: "3 Fit" }).click();
+  await page.evaluate(() => {
+    (window as unknown as { __ivfitterStopClicked?: boolean }).__ivfitterStopClicked = false;
+    const clickStopWhenAvailable = () => {
+      const stop = Array.from(document.querySelectorAll("button")).find(
+        (button) => button.textContent?.includes("Stop fit"),
+      ) as HTMLButtonElement | undefined;
+      if (!stop) return false;
+      stop.click();
+      (window as unknown as { __ivfitterStopClicked?: boolean }).__ivfitterStopClicked = true;
+      return true;
+    };
+    const observer = new MutationObserver(() => {
+      if (clickStopWhenAvailable()) observer.disconnect();
+    });
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+    });
+    clickStopWhenAvailable();
+  });
+  await runFit.click();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          Boolean(
+            (window as unknown as { __ivfitterStopClicked?: boolean })
+              .__ivfitterStopClicked,
+          ),
+      ),
+    )
+    .toBe(true);
+  await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
+  await expect(page.getByText(/Cancelled ·/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Advanced" }).click();
+  await page
+    .getByLabel("Assembly/solver mode")
+    .selectOption("legacy_composite");
+  const timeoutInput = page.getByLabel("Run timeout (s)");
+  await timeoutInput.fill("3");
+  await timeoutInput.press("Enter");
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Run fit" }).click();
+  const terminalStatus = page.locator(".fit-status-compact");
+  await expect
+    .poll(async () => (await terminalStatus.textContent()) ?? "", {
+      timeout: 15_000,
+    })
+    .toMatch(/Converged|Timeout|Error/);
+  await expect(
+    page.getByRole("button", { name: /Run fit|Run again/ }),
+  ).toBeEnabled();
+
+  const traceSelect = page.locator(".plot-trace-select select");
+  await expect(traceSelect.locator("option")).toHaveCount(14);
+  const originalTrace = await traceSelect.inputValue();
+  const options = await traceSelect.locator("option").evaluateAll((nodes) =>
+    nodes.map((node) => (node as HTMLOptionElement).value),
+  );
+  const replacementTrace = options.find((value) => value !== originalTrace);
+  expect(replacementTrace).toBeTruthy();
+  await traceSelect.selectOption(replacementTrace!);
+
+  await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByText("No critical issue detected")).toHaveCount(0);
+});
+
+test("successful synthetic fit exports reports and model changes invalidate it", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "ivfitter.modelBuilder.preview.layout",
+      JSON.stringify({
+        version: 1,
+        view: { x: 0, y: 0, scale: 1 },
+        nextNode: 4,
+        nextConn: 3,
+        nodes: [
+          {
+            id: "V",
+            label: "V",
+            templateName: "V",
+            x: 520,
+            y: 160,
+            w: 28,
+            h: 28,
+            terminal: true,
+            protected: true,
+            side: "bottom",
+          },
+          {
+            id: "GND",
+            label: "GND",
+            templateName: "GND",
+            x: 520,
+            y: 520,
+            w: 28,
+            h: 28,
+            terminal: true,
+            protected: true,
+            side: "top",
+          },
+          {
+            id: "R1",
+            label: "R1",
+            templateName: "Resistance",
+            behavior: "R_of_V",
+            expression: "R",
+            parameters: [
+              {
+                symbol: "R",
+                value: 1000,
+                lower: 1e-12,
+                upper: 1e9,
+                fit: true,
+                unit: "ohm",
+              },
+            ],
+            x: 460,
+            y: 330,
+            w: 120,
+            h: 60,
+          },
+        ],
+        conns: [
+          {
+            id: "c1",
+            from: "V",
+            fromSide: "bottom",
+            to: "R1",
+            toSide: "top",
+            manual: null,
+          },
+          {
+            id: "c2",
+            from: "R1",
+            fromSide: "bottom",
+            to: "GND",
+            toSide: "top",
+            manual: null,
+          },
+        ],
+      }),
+    );
+  });
+  await page.goto("http://127.0.0.1:4173/");
+
+  const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
+  await workflow.getByRole("button", { name: "2 Model builder" }).click();
+  await expect(page.locator(".mbv3-direct-page")).toBeVisible();
+
+  const useModel = page.getByRole("button", { name: "Use model for fitting" });
+  await expect(useModel).toBeEnabled({ timeout: 15_000 });
+
+  await page.getByRole("button", { name: "Simulate IV" }).click();
+  await expect(page.getByText("Synthetic IV", { exact: true })).toBeVisible();
+  await page.getByLabel("V step").fill("0.5");
+  await page.getByRole("button", { name: "Generate and import" }).click();
+  await expect(page.getByText("Synthetic trace generated and imported.")).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.getByRole("button", { name: "Simulate IV" }).click();
+
+  await useModel.click();
+  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+
+  await page.getByRole("button", { name: "Advanced" }).click();
+  await page.getByLabel("Assembly/solver mode").selectOption("graph_dc");
+  const timeoutInput = page.getByLabel("Run timeout (s)");
+  await timeoutInput.fill("20");
+  await timeoutInput.press("Enter");
+  await page.getByRole("button", { name: "Close" }).click();
+
+  await page.getByRole("button", { name: "Run fit" }).click();
+  await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator(".plot-grid.paired-plot")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-fit-result.png",
+    fullPage: true,
+  });
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
+  await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-report-result.png",
+    fullPage: true,
+  });
+
+  const htmlButton = page.getByRole("button", { name: /Download .*HTML/ });
+  const csvButton = page.getByRole("button", { name: /Download .*CSV/ });
+  await expect(htmlButton).toBeEnabled();
+  await expect(csvButton).toBeEnabled();
+
+  const [htmlDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    htmlButton.click(),
+  ]);
+  expect(htmlDownload.suggestedFilename()).toMatch(/\.html$/);
+
+  const [csvDownload] = await Promise.all([
+    page.waitForEvent("download"),
+    csvButton.click(),
+  ]);
+  expect(csvDownload.suggestedFilename()).toMatch(/\.csv$/);
+
+  await workflow.getByRole("button", { name: "2 Model builder" }).click();
+  await page.getByRole("button", { name: "Model presets" }).click();
+  await page.getByText("Two diode model", { exact: true }).click();
+  await expect(page.getByRole("button", { name: "Use model for fitting" })).toBeEnabled();
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.getByText("No completed fit yet.")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Download .*HTML/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Download .*CSV/ })).toHaveCount(0);
+});
+
+test("four-step navigation remains usable on a narrow viewport", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/pyodide/**", async (route) => {
+    await route.abort("failed");
+  });
+  await page.setViewportSize({ width: 420, height: 800 });
+  await page.goto("http://127.0.0.1:4173/");
+
+  const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
+  for (const name of [
+    "Import data",
+    "Model builder",
+    "Fit",
+    "Report",
+  ]) {
+    const button = workflow.getByRole("button", { name: new RegExp(name) });
+    await expect(button).toBeVisible();
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(420);
+  }
+
+  const overflow = await page.evaluate(() => ({
+    body: document.body.scrollWidth - document.body.clientWidth,
+    html: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  }));
+  expect(Math.max(overflow.body, overflow.html)).toBeLessThanOrEqual(1);
+});
+
+test("static UI reports browser runtime bootstrap failure and offers retry", async ({ page }) => {
+  await page.route("https://cdn.jsdelivr.net/pyodide/**", async (route) => {
+    await route.abort("failed");
+  });
+
+  await page.goto("http://127.0.0.1:4173/");
+
+  const alert = page.getByRole("alert");
+  await expect(alert).toContainText("Local fitting engine failed to start", {
+    timeout: 30_000,
+  });
+  await expect(alert.getByRole("button", { name: "Retry" })).toBeVisible();
 });

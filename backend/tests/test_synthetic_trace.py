@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 
 from ivfitter.api.main import app
 from ivfitter.core.fitting_engine import fit_trace
-from ivfitter.core.model_spec import ComponentSpec, FitConfig, FitRequest, ModelSpec, ParameterSpec
+from ivfitter.core.model_spec import ComponentSpec, FitConfig, FitRequest, GraphComponent, GraphNode, GraphSpec, ModelSpec, ParameterSpec
 from ivfitter.core.synthetic_trace import (
     SyntheticArtifactConfig,
     SyntheticNoiseConfig,
@@ -206,3 +206,73 @@ def test_synthetic_metadata_preserves_exact_diode_rs_rsh_ground_truth():
     assert synthetic.metadata["ground_truth_parameters"]["D1.n"] == 1.5
     assert synthetic.metadata["ground_truth_parameters"]["Rs.Rs_ohm"] == 10.0
     assert synthetic.metadata["ground_truth_parameters"]["Rsh.Rs_ohm"] == 1e9
+
+
+def graph_resistance_model(r_ohm: float = 1000.0) -> ModelSpec:
+    return ModelSpec(
+        graph=GraphSpec(
+            terminals=["V"],
+            reference_node="GND",
+            nodes=[
+                GraphNode(id="V", role="terminal"),
+                GraphNode(id="GND", role="reference"),
+            ],
+            components=[
+                GraphComponent(
+                    id="R1",
+                    function_type="custom",
+                    law_id="custom_expression",
+                    evaluation_form="current_branch",
+                    placement="parallel_current_branch",
+                    node_pos="V",
+                    node_neg="GND",
+                    polarity="forward",
+                    params={
+                        "R": p(
+                            r_ohm,
+                            fit=True,
+                            lower=1e-12,
+                            upper=1e9,
+                            unit="ohm",
+                        )
+                    },
+                    metadata={
+                        "behavior": "R_of_V",
+                        "expression": "R",
+                        "templateKey": "resistance",
+                        "source": "model_builder",
+                    },
+                )
+            ],
+            schema_version="model_builder",
+        ),
+        version="graph-test",
+    )
+
+
+def test_graph_native_synthetic_uses_graph_solver_and_graph_ground_truth():
+    model = graph_resistance_model(1000.0)
+    synthetic = generate(
+        model=model,
+        voltage_start=-1.0,
+        voltage_stop=1.0,
+        voltage_step=0.5,
+    )
+
+    assert synthetic.metadata["solver_mode"] == "graph_dc"
+    assert synthetic.metadata["ground_truth_parameters"] == {"R1.R": 1000.0}
+    np.testing.assert_allclose(
+        synthetic.current_A,
+        [-1e-3, -5e-4, 0.0, 5e-4, 1e-3],
+        rtol=1e-12,
+        atol=1e-15,
+    )
+
+
+def test_graph_native_synthetic_rejects_invalid_graph_contract():
+    model = graph_resistance_model(1000.0)
+    assert model.graph is not None
+    model.graph.components[0].params["R"].lower = 0.0
+
+    with pytest.raises(ValueError, match="graph_resistance_bound_includes_zero"):
+        generate(model=model)

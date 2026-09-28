@@ -28,143 +28,80 @@ type ReportSemantics = {
 };
 
 const REPORT_TEXT = {
-  en: {
-    noCompletedFit: "No completed fit yet.",
-    goToFitting: "Go to Fitting",
-    running: "Fit is running; report will be available after completion.",
-    validFit: "Valid fit",
-    needsReview: "Needs review",
-    invalidFit: "Invalid fit",
-    normalReport: "Validated report",
-    reviewReport: "Review report",
-    diagnosticOnly: "Diagnostic report only",
-    unavailable: "Unavailable",
-    usableYes: "Yes",
-    usableNo: "No",
-    noMainIssue: "No critical issue detected",
-    numericalExplosion: "Numerical current explosion",
-    solverFailure: "Optimizer did not produce a valid result",
-    qualityGate: "Failed numerical quality checks",
-    criticalIssue: "Critical issue",
-    warnings: "Warnings and diagnostics",
-    parameterSummary: "Parameters",
-    diagnosticValues: "Values are shown for diagnostics only and are not a validated model.",
-    metrics: "Fit process and quality metrics",
-    modelEvaluation: "Model evaluation summary",
-    modelIntro: "This summary explains how the drawn V-to-GND graph was converted into fitting equations.",
-    howRead: "How to read this model",
-    voltageRelation: "Component voltage",
-    currentSum: "Current residual",
-    backendEquations: "Show technical equation details",
-    exports: "Next",
-    downloadHtml: "Download HTML report",
-    downloadCsv: "Download report CSV",
-    downloadDiagnosticHtml: "Download diagnostic HTML",
-    downloadDiagnosticCsv: "Download diagnostic CSV",
-    diagnosticExportHelp: "This export is for troubleshooting only. It is not a validated fit report.",
-    quickSummary: "Fit result",
-    status: "Status",
-    reportMode: "Report mode",
-    mainIssue: "Main issue",
-    maxFitCurrent: "Max fitted current",
-    measuredScale: "Measured current scale",
-    nearBoundParameters: "Near-bound parameters",
-    usableAsReport: "Usable as validated report",
-    reviewDiagnostics: "Review diagnostics",
-    openBounds: "Open bounds/parameters",
-    saferModel: "Try safer model",
-    workflowData: "Data",
-    workflowModel: "Model",
-    workflowFitting: "Fitting",
-    generatedReportText: "Generated report text",
-    noWarnings: "No warnings or errors reported by the fitting backend.",
-    parameter: "Parameter",
-    value: "Value",
-    state: "Status",
-    stdErr: "Std. err.",
-    note: "Note",
-    nearLower: "near lower bound",
-    nearUpper: "near upper bound",
-    weak: "large uncertainty",
-    fixed: "fixed",
-    fit: "fit",
-    suspect: "suspect",
-    trace: "Trace",
-    model: "Model",
-    software: "Software",
-    plots: "Plots",
-  },
-  zh: {
-    noCompletedFit: "还没有完成的拟合。",
-    goToFitting: "返回拟合页",
-    running: "拟合正在运行；完成后才能生成报告。",
-    validFit: "有效拟合",
-    needsReview: "需要复核",
-    invalidFit: "无效拟合",
-    normalReport: "已验证报告",
-    reviewReport: "复核报告",
-    diagnosticOnly: "仅诊断报告",
-    unavailable: "不可用",
-    usableYes: "是",
-    usableNo: "否",
-    noMainIssue: "未检测到关键问题",
-    numericalExplosion: "数值电流爆炸",
-    solverFailure: "优化器未产生有效结果",
-    qualityGate: "未通过数值质量检查",
-    criticalIssue: "关键问题",
-    warnings: "警告和诊断",
-    parameterSummary: "参数",
-    diagnosticValues: "这些数值仅用于诊断，不是已验证模型。",
-    metrics: "拟合过程和质量指标",
-    modelEvaluation: "模型求解摘要",
-    modelIntro: "本摘要说明当前 V-to-GND 画布图如何被转换为拟合方程。",
-    howRead: "如何阅读这个模型",
-    voltageRelation: "组件电压",
-    currentSum: "电流残差",
-    backendEquations: "查看技术公式细节",
-    exports: "下一步",
-    downloadHtml: "下载 HTML 报告",
-    downloadCsv: "下载 CSV 报告",
-    downloadDiagnosticHtml: "下载诊断 HTML",
-    downloadDiagnosticCsv: "下载诊断 CSV",
-    diagnosticExportHelp: "该导出仅用于排查问题，不是已验证拟合报告。",
-    quickSummary: "拟合结果",
-    status: "状态",
-    reportMode: "报告模式",
-    mainIssue: "主要问题",
-    maxFitCurrent: "最大拟合电流",
-    measuredScale: "实测电流尺度",
-    nearBoundParameters: "贴近边界参数",
-    usableAsReport: "可作为已验证报告",
-    reviewDiagnostics: "查看 diagnostics",
-    openBounds: "打开边界/参数",
-    saferModel: "尝试更安全模型",
-    workflowData: "数据",
-    workflowModel: "模型",
-    workflowFitting: "拟合",
-    generatedReportText: "生成的报告文本",
-    noWarnings: "后端未报告 warnings 或 errors。",
-    parameter: "参数",
-    value: "数值",
-    state: "状态",
-    stdErr: "标准误差",
-    note: "说明",
-    nearLower: "贴近下界",
-    nearUpper: "贴近上界",
-    weak: "不确定度大",
-    fixed: "固定",
-    fit: "拟合",
-    suspect: "可疑",
-    trace: "Trace",
-    model: "模型",
-    software: "软件",
-    plots: "图表",
-  },
+  noCompletedFit: "No completed fit yet.",
+  goToFitting: "Go to Fitting",
+  running: "Fit is running; report will be available after completion.",
+  validFit: "Valid fit",
+  needsReview: "Needs review",
+  invalidFit: "Invalid fit",
+  normalReport: "Validated report",
+  reviewReport: "Review report",
+  diagnosticOnly: "Diagnostic report only",
+  unavailable: "Unavailable",
+  usableYes: "Yes",
+  usableNo: "No",
+  noMainIssue: "No critical issue detected",
+  numericalExplosion: "Numerical current explosion",
+  solverFailure: "Optimizer did not produce a valid result",
+  qualityGate: "Failed numerical quality checks",
+  criticalIssue: "Critical issue",
+  warnings: "Warnings and diagnostics",
+  parameterSummary: "Parameters",
+  diagnosticValues:
+    "Values are shown for diagnostics only and are not a validated model.",
+  metrics: "Fit process and quality metrics",
+  modelEvaluation: "Model evaluation summary",
+  modelIntro:
+    "This summary explains how the drawn V-to-GND graph was converted into fitting equations.",
+  howRead: "How to read this model",
+  voltageRelation: "Component voltage",
+  currentSum: "Current residual",
+  backendEquations: "Show technical equation details",
+  exports: "Next",
+  downloadHtml: "Download HTML report",
+  downloadCsv: "Download report CSV",
+  downloadDiagnosticHtml: "Download diagnostic HTML",
+  downloadDiagnosticCsv: "Download diagnostic CSV",
+  diagnosticExportHelp:
+    "This export is for troubleshooting only. It is not a validated fit report.",
+  quickSummary: "Fit result",
+  status: "Status",
+  reportMode: "Report mode",
+  mainIssue: "Main issue",
+  maxFitCurrent: "Max fitted current",
+  measuredScale: "Measured current scale",
+  nearBoundParameters: "Near-bound parameters",
+  usableAsReport: "Usable as validated report",
+  reviewDiagnostics: "Review diagnostics",
+  openBounds: "Open bounds/parameters",
+  saferModel: "Try safer model",
+  workflowData: "Data",
+  workflowModel: "Model",
+  workflowFitting: "Fitting",
+  generatedReportText: "Generated report text",
+  noWarnings: "No warnings or errors reported by the fitting backend.",
+  parameter: "Parameter",
+  value: "Value",
+  state: "Status",
+  stdErr: "Std. err.",
+  note: "Note",
+  nearLower: "near lower bound",
+  nearUpper: "near upper bound",
+  weak: "large uncertainty",
+  fixed: "fixed",
+  fit: "fit",
+  suspect: "suspect",
+  trace: "Trace",
+  model: "Model",
+  software: "Software",
+  plots: "Plots",
 } as const;
 
-function rt(language: Language | undefined | null, key: keyof typeof REPORT_TEXT.en) {
-  const dictionary = language === "zh" ? REPORT_TEXT.zh : REPORT_TEXT.en;
-  return dictionary[key] ?? REPORT_TEXT.en[key];
+function rt(
+  _language: Language | undefined | null,
+  key: keyof typeof REPORT_TEXT,
+) {
+  return REPORT_TEXT[key];
 }
 
 function finiteAbs(values: number[] | undefined) {
@@ -206,82 +143,91 @@ function fmtMetricValue(key: string, value: number | null | undefined) {
   return unit && text !== "—" ? `${text} ${unit}` : text;
 }
 
-function metricDisplayName(key: string, language: Language) {
-  const zh = language === "zh";
-  const labels: Record<string, [string, string]> = {
-    linear_rmse_A: ["Linear RMSE", "线性 RMSE"],
-    normalized_rmse: ["Normalized RMSE", "归一化 RMSE"],
-    linear_r2: ["Linear R²", "线性 R²"],
-    log_magnitude_r2: ["Log |I| R²", "Log |I| R²"],
-    log_magnitude_mae_decades: ["Log |I| MAE", "Log |I| 平均误差"],
-    reduced_chi_square: ["Reduced χ²", "Reduced χ²"],
-    weighted_chi_square: ["Weighted χ²", "加权 χ²"],
-    max_abs_residual_A: ["Max residual", "最大残差"],
-    elapsed_s: ["Solver time", "求解耗时"],
-    function_evaluations: ["Function evaluations", "函数评估次数"],
-    jacobian_evaluations: ["Jacobian evaluations", "Jacobian 评估次数"],
-    free_parameter_count: ["Free parameters", "自由参数数"],
-    degrees_of_freedom: ["Degrees of freedom", "自由度"],
-    optimizer_status: ["Optimizer status", "优化器状态"],
-    cost: ["Final cost", "最终代价"],
-    optimality: ["Optimality", "最优性"],
-    root_solver_failures: ["Root-solver failures", "Root 求解失败"],
-    fitsRun: ["Fits this session", "本会话拟合次数"],
-    totalFunctionEvaluations: ["Session evaluations", "会话累计评估"],
-    totalElapsedS: ["Session solver time", "会话累计耗时"],
-    totalRootSolverFailures: ["Session root failures", "会话累计 root 失败"],
+function metricDisplayName(key: string, _language: Language) {
+  const labels: Record<string, string> = {
+    linear_rmse_A: "Linear RMSE",
+    normalized_rmse: "Normalized RMSE",
+    linear_r2: "Linear R²",
+    log_magnitude_r2: "Log |I| R²",
+    log_magnitude_mae_decades: "Log |I| MAE",
+    reduced_chi_square: "Reduced χ²",
+    weighted_chi_square: "Weighted χ²",
+    max_abs_residual_A: "Max residual",
+    elapsed_s: "Solver time",
+    function_evaluations: "Function evaluations",
+    jacobian_evaluations: "Jacobian evaluations",
+    free_parameter_count: "Free parameters",
+    degrees_of_freedom: "Degrees of freedom",
+    optimizer_status: "Optimizer status",
+    cost: "Final cost",
+    optimality: "Optimality",
+    root_solver_failures: "Root-solver failures",
+    fitsRun: "Fits this session",
+    totalFunctionEvaluations: "Session evaluations",
+    totalElapsedS: "Session solver time",
+    totalRootSolverFailures: "Session root failures",
   };
-  const pair = labels[key];
-  if (pair) return zh ? pair[1] : pair[0];
-  return key.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase());
+  return (
+    labels[key] ??
+    key.replace(/_/g, " ").replace(/\b\w/g, (m) => m.toUpperCase())
+  );
 }
 
-function metricExplanation(key: string, language: Language) {
-  const zh = language === "zh";
-  const help: Record<string, [string, string]> = {
-    linear_rmse_A: ["Root-mean-square current error. Smaller is better; it is dominated by high-current regions.", "电流均方根误差。越小越好，通常受大电流区主导。"],
-    normalized_rmse: ["RMSE normalized by measured-current scale. Useful for comparing traces with different current levels.", "按实测电流尺度归一化的 RMSE，适合比较不同电流水平的曲线。"],
-    linear_r2: ["Linear-space R². High values indicate good large-current agreement but may hide low-current decade errors.", "线性空间 R²。数值高说明大电流区较好，但可能掩盖小电流数量级误差。"],
-    log_magnitude_r2: ["R² of log10(|I|). More sensitive to multi-decade IV behavior.", "log10(|I|) 的 R²，更敏感于跨数量级 IV 行为。"],
-    log_magnitude_mae_decades: ["Mean absolute error in log-current decades; 0.3 decade is roughly a factor of two.", "log 电流数量级平均绝对误差；0.3 decade 约为 2 倍误差。"],
-    reduced_chi_square: ["Weighted reduced χ²-like diagnostic. Interpret relatively unless weights are measured uncertainties.", "加权 reduced χ²-like 诊断。除非权重是真实不确定度，否则主要作相对比较。"],
-    weighted_chi_square: ["Sum of squared weighted residuals for the selected weighting and voltage range.", "当前 weighting 和电压范围下的加权残差平方和。"],
-    max_abs_residual_A: ["Largest absolute current residual; useful for localized outliers or model-failure regions.", "最大绝对电流残差；适合发现局部异常点或模型失效区。"],
+function metricExplanation(key: string, _language: Language) {
+  const help: Record<string, string> = {
+    linear_rmse_A:
+      "Root-mean-square current error. Smaller is better; it is dominated by high-current regions.",
+    normalized_rmse:
+      "RMSE normalized by measured-current scale. Useful for comparing traces with different current levels.",
+    linear_r2:
+      "Linear-space R². High values indicate good large-current agreement but may hide low-current decade errors.",
+    log_magnitude_r2:
+      "R² of log10(|I|). More sensitive to multi-decade IV behavior.",
+    log_magnitude_mae_decades:
+      "Mean absolute error in log-current decades; 0.3 decade is roughly a factor of two.",
+    reduced_chi_square:
+      "Weighted reduced χ²-like diagnostic. Interpret relatively unless weights are measured uncertainties.",
+    weighted_chi_square:
+      "Sum of squared weighted residuals for the selected weighting and voltage range.",
+    max_abs_residual_A:
+      "Largest absolute current residual; useful for localized outliers or model-failure regions.",
   };
-  const fallback: [string, string] = ["Backend fit metric; interpret with plots, residuals, warnings, and parameter bounds.", "后端拟合指标，需要结合图、残差、warnings 和参数边界解释。"];
-  const pair = help[key] ?? fallback;
-  return zh ? pair[1] : pair[0];
+  return (
+    help[key] ??
+    "Backend fit metric; interpret with plots, residuals, warnings, and parameter bounds."
+  );
 }
 
-function solverExplanation(key: string, language: Language) {
-  const zh = language === "zh";
-  const help: Record<string, [string, string]> = {
-    elapsed_s: ["Wall-clock solver time for this fit.", "本次拟合求解耗时。"],
-    function_evaluations: ["Number of objective evaluations; high values can indicate a difficult optimization.", "目标函数评估次数；过高通常说明优化较困难。"],
-    jacobian_evaluations: ["Jacobian evaluations used by the optimizer.", "优化器使用的 Jacobian 评估次数。"],
-    free_parameter_count: ["Number of fitted parameters actively optimized.", "参与优化的自由参数数量。"],
-    degrees_of_freedom: ["Data points minus free parameters; low values make fit statistics less reliable.", "数据点数减自由参数数；过低会降低统计可靠性。"],
-    optimizer_status: ["Raw optimizer termination status.", "优化器原始终止状态。"],
-    cost: ["Final optimization cost. Compare only for the same data range and weighting.", "最终优化代价。只适合同一数据范围和 weighting 下比较。"],
-    optimality: ["First-order optimality measure; smaller usually means the solver stopped closer to a stationary point.", "一阶最优性指标；越小通常表示更接近驻点。"],
-    root_solver_failures: ["Number of internal root-solver failures during implicit model evaluation.", "隐式模型求解中的内部 root-solver 失败次数。"],
+function solverExplanation(key: string, _language: Language) {
+  const help: Record<string, string> = {
+    elapsed_s: "Wall-clock solver time for this fit.",
+    function_evaluations:
+      "Number of objective evaluations; high values can indicate a difficult optimization.",
+    jacobian_evaluations: "Jacobian evaluations used by the optimizer.",
+    free_parameter_count: "Number of fitted parameters actively optimized.",
+    degrees_of_freedom:
+      "Data points minus free parameters; low values make fit statistics less reliable.",
+    optimizer_status: "Raw optimizer termination status.",
+    cost:
+      "Final optimization cost. Compare only for the same data range and weighting.",
+    optimality:
+      "First-order optimality measure; smaller usually means the solver stopped closer to a stationary point.",
+    root_solver_failures:
+      "Number of internal root-solver failures during implicit model evaluation.",
   };
-  const fallback: [string, string] = ["Solver-process diagnostic reported by the backend.", "后端报告的求解过程诊断。"];
-  const pair = help[key] ?? fallback;
-  return zh ? pair[1] : pair[0];
+  return help[key] ?? "Solver-process diagnostic reported by the backend.";
 }
 
-function sessionExplanation(key: string, language: Language) {
-  const zh = language === "zh";
-  const help: Record<string, [string, string]> = {
-    fitsRun: ["Number of fit attempts in this app session.", "当前软件会话中的拟合次数。"],
-    totalFunctionEvaluations: ["Total function evaluations accumulated in this session.", "当前会话累计函数评估次数。"],
-    totalElapsedS: ["Total solver time accumulated in this session.", "当前会话累计求解耗时。"],
-    totalRootSolverFailures: ["Total internal root-solver failures accumulated in this session.", "当前会话累计内部 root-solver 失败次数。"],
+function sessionExplanation(key: string, _language: Language) {
+  const help: Record<string, string> = {
+    fitsRun: "Number of fit attempts in this app session.",
+    totalFunctionEvaluations:
+      "Total function evaluations accumulated in this session.",
+    totalElapsedS: "Total solver time accumulated in this session.",
+    totalRootSolverFailures:
+      "Total internal root-solver failures accumulated in this session.",
   };
-  const fallback: [string, string] = ["Session-level run counter.", "当前会话级计数。"];
-  const pair = help[key] ?? fallback;
-  return zh ? pair[1] : pair[0];
+  return help[key] ?? "Session-level run counter.";
 }
 
 function nearBoundLabel(parameter: ParameterResult, language: Language) {
@@ -329,7 +275,18 @@ function componentPlainRole(component: ModelSpec["series"][number], language: La
 
 function deriveReportSemantics(result: FitResult | null, language: Language): ReportSemantics {
   if (!result) {
-    return { fitStatus: rt(language, "unavailable"), reportMode: rt(language, "unavailable"), mainIssue: rt(language, "noMainIssue"), usable: rt(language, "usableNo"), tone: "none", mode: "unavailable", measuredScale: 0, maxFitCurrent: 0, maxResidual: 0, nearBoundParameters: [] };
+    return {
+      fitStatus: rt(language, "unavailable"),
+      reportMode: rt(language, "unavailable"),
+      mainIssue: "—",
+      usable: "—",
+      tone: "none",
+      mode: "unavailable",
+      measuredScale: 0,
+      maxFitCurrent: 0,
+      maxResidual: 0,
+      nearBoundParameters: [],
+    };
   }
   const measuredScale = dataScale(result.curves.current_measured_A);
   const maxFitCurrent = Math.max(...finiteAbs(result.curves.current_fit_A), 0);
@@ -456,23 +413,72 @@ function ReportPlots({ result, language }: { result: FitResult; language: Langua
   </div></section>;
 }
 
-function ModelAssemblyExplanation({ model, equationLines, language }: { model: ModelSpec; equationLines: string[]; language: Language }) {
-  const isZh = language === "zh";
+function ModelAssemblyExplanation({
+  model,
+  equationLines,
+  language,
+}: {
+  model: ModelSpec;
+  equationLines: string[];
+  language: Language;
+}) {
   const components = [...model.series, ...model.core, ...model.parallel];
-  const activeNames = components.map((item) => String(item.metadata?.nickname ?? item.id)).join(", ") || (isZh ? "无活跃组件" : "no active components");
-  const graphComponentCount = model.graph?.components?.length ?? components.length;
-  const readText = isZh
-    ? `后端图模型包含 ${graphComponentCount} 个组件；当前拟合使用 ${activeNames}。每个组件由两端节点的电压差驱动，开放或未连通支路不会悄悄进入拟合。`
-    : `The backend graph contains ${graphComponentCount} component(s); fitting uses ${activeNames}. Each component is driven by the voltage difference between its two connected nodes. Open or disconnected branches do not silently enter fitting.`;
-  return <section className="card report-section report-model-equation-card"><h2>{rt(language, "modelEvaluation")}</h2><p className="muted">{rt(language, "modelIntro")}</p><div className="report-model-explainer">
-    <p><strong>{rt(language, "howRead")}</strong>: {readText}</p>
-    <div className="report-core-equations">
-      <div className="report-equation-line friendly-equation"><span className="report-equation-label">{rt(language, "voltageRelation")}</span><MathFormula latex="\Delta V_m=V_{m,+}-V_{m,-}" className="report-formula" /></div>
-      <div className="report-equation-line friendly-equation"><span className="report-equation-label">{rt(language, "currentSum")}</span><MathFormula latex="r_i=I_{measured,i}-I_{model}(V_i,\theta)" className="report-formula" /></div>
-    </div>
-    <div className="report-component-role-grid">{components.map((component) => <div key={component.id} className="report-component-role">{componentPlainRole(component, language)}</div>)}</div>
-    {equationLines.length ? <details className="report-technical-equations"><summary>{rt(language, "backendEquations")}</summary><div className="technical-equation-list">{equationLines.map((line, idx) => <code key={`${line}-${idx}`}>{line}</code>)}</div></details> : null}
-  </div></section>;
+  const activeNames =
+    components
+      .map((item) => String(item.metadata?.nickname ?? item.id))
+      .join(", ") || "no active components";
+  const graphComponentCount =
+    model.graph?.components?.length ?? components.length;
+  const readText =
+    `The backend graph contains ${graphComponentCount} component(s); fitting uses ${activeNames}. Each component is driven by the voltage difference between its two connected nodes. Open or disconnected branches do not silently enter fitting.`;
+  return (
+    <section className="card report-section report-model-equation-card">
+      <h2>{rt(language, "modelEvaluation")}</h2>
+      <p className="muted">{rt(language, "modelIntro")}</p>
+      <div className="report-model-explainer">
+        <p>
+          <strong>{rt(language, "howRead")}</strong>: {readText}
+        </p>
+        <div className="report-core-equations">
+          <div className="report-equation-line friendly-equation">
+            <span className="report-equation-label">
+              {rt(language, "voltageRelation")}
+            </span>
+            <MathFormula
+              latex="\\Delta V_m=V_{m,+}-V_{m,-}"
+              className="report-formula"
+            />
+          </div>
+          <div className="report-equation-line friendly-equation">
+            <span className="report-equation-label">
+              {rt(language, "currentSum")}
+            </span>
+            <MathFormula
+              latex="r_i=I_{measured,i}-I_{model}(V_i,\\theta)"
+              className="report-formula"
+            />
+          </div>
+        </div>
+        <div className="report-component-role-grid">
+          {components.map((component) => (
+            <div key={component.id} className="report-component-role">
+              {componentPlainRole(component, language)}
+            </div>
+          ))}
+        </div>
+        {equationLines.length ? (
+          <details className="report-technical-equations">
+            <summary>{rt(language, "backendEquations")}</summary>
+            <div className="technical-equation-list">
+              {equationLines.map((line, idx) => (
+                <code key={`${line}-${idx}`}>{line}</code>
+              ))}
+            </div>
+          </details>
+        ) : null}
+      </div>
+    </section>
+  );
 }
 
 function GeneratedReportText({ report, language }: { report: string; language: Language }) {
@@ -493,7 +499,7 @@ function QuickSummary({ result, semantics, setActiveView, language }: { result: 
 
 
 function ReportEquivalentCircuit({ model, language }: { model: ModelSpec; language: Language }) {
-  return <section className="card report-section report-equivalent-circuit-card"><h2>{language === "zh" ? "等效电路" : "Equivalent circuit"}</h2><EquivalentCircuitView model={model} language={language} /></section>;
+  return <section className="card report-section report-equivalent-circuit-card"><h2>{"Equivalent circuit"}</h2><EquivalentCircuitView model={model} language={language} /></section>;
 }
 
 function ReportExportActions({
@@ -567,6 +573,27 @@ export function ReportWorkflowPage({ selectedTrace, hasSelectedTrace, model, res
   void sidePct;
   void leftPct;
   void onResizeStart;
+
+  if (!result) {
+    return (
+      <section className="workflow-page report-page scroll-page report-page-single-column scientific-report-page">
+        <main className="report-main-column report-document-flow">
+          <ReportHero
+            result={null}
+            semantics={semantics}
+            traceName={traceName}
+            model={model}
+            appVersion={appVersion}
+            verdict={verdict}
+            isFitting={isFitting}
+            setActiveView={setActiveView}
+            language={language}
+          />
+        </main>
+      </section>
+    );
+  }
+
   return <section className="workflow-page report-page scroll-page report-page-single-column scientific-report-page">
     <ReportExportActions result={result} report={report} invalid={invalid} reportMessage={reportMessage} onExportReportHtml={onExportReportHtml} onExportReportCsv={onExportReportCsv} language={language} />
     <main className="report-main-column report-document-flow">

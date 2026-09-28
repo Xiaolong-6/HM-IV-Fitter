@@ -1,4 +1,10 @@
-import type { FitResult, ModelSpec, ParameterResult, ParameterSpec, TraceData } from "./types";
+import type {
+  FitResult,
+  ModelSpec,
+  ParameterResult,
+  ParameterSpec,
+  TraceData,
+} from "./types";
 import { fmtEng } from "./format";
 import type { Language } from "./i18n";
 
@@ -26,18 +32,22 @@ export function currentDataScale(values: number[]) {
   return dataScale(values);
 }
 
-function zh(language: Language, english: string, chinese: string) {
-  return language === "zh" ? chinese : english;
-}
-
 export function componentNickname(model: ModelSpec, componentId: string) {
-  const comp = [...model.core, ...model.series, ...model.parallel].find((item) => item.id === componentId);
+  const comp = [...model.core, ...model.series, ...model.parallel].find(
+    (item) => item.id === componentId,
+  );
   return String(comp?.metadata?.nickname ?? componentId);
 }
 
-export function parameterMeaning(result: FitResult, key: string, language: Language) {
+export function parameterMeaning(
+  result: FitResult,
+  key: string,
+  _language: Language,
+) {
   const [componentId, rawName] = key.split(".");
-  const comp = [...result.model.core, ...result.model.series, ...result.model.parallel].find((item) => item.id === componentId);
+  const comp = [...result.model.core, ...result.model.series, ...result.model.parallel].find(
+    (item) => item.id === componentId,
+  );
   const name = rawName ?? key;
   const value = result.parameters[key]?.value;
   const lower = result.parameters[key]?.lower;
@@ -47,105 +57,147 @@ export function parameterMeaning(result: FitResult, key: string, language: Langu
 
   const notes: string[] = [];
   if (/^n$/i.test(name)) {
-    notes.push(zh(language,
+    notes.push(
       "Ideality factor: near 1 often indicates diffusion-dominated current; near 2 often indicates recombination; values above 2 usually deserve a model/data check.",
-      "理想因子：接近 1 常见于扩散主导，接近 2 常见于复合主导；大于 2 通常需要检查模型或数据质量。",
-    ));
+    );
     if (Number.isFinite(value) && value > 2) {
-      notes.push(zh(language, "This fitted value is above 2, so treat the fit as a diagnostic result rather than a final physical claim.", "当前值大于 2，建议先把它当作诊断结果，不要直接作为最终物理结论。"));
+      notes.push(
+        "This fitted value is above 2, so treat the fit as a diagnostic result rather than a final physical claim.",
+      );
     }
   } else if (/I0|I_?0/i.test(name)) {
-    notes.push(zh(language,
+    notes.push(
       "Saturation/current scale. It can span many decades; a poor initial value can make the solver chase an unphysical curve.",
-      "饱和电流/电流尺度，可能跨很多数量级；初始值偏太远时，求解器容易跑到不物理的曲线。",
-    ));
-    if (Number.isFinite(value) && value > 1e-6) notes.push(zh(language, "This is large for many diode-like junctions; verify units, leakage paths, and the selected trace.", "对很多二极管结来说这个值偏大；请确认单位、漏电支路和当前 trace。"));
+    );
+    if (Number.isFinite(value) && value > 1e-6) {
+      notes.push(
+        "This is large for many diode-like junctions; verify units, leakage paths, and the selected trace.",
+      );
+    }
   } else if (/^Rs|Rs_ohm|R_s/i.test(name) || /^rs$/i.test(nick)) {
-    notes.push(zh(language,
+    notes.push(
       "Series resistance: controls high-current voltage drop and the slope/roll-off at large forward bias.",
-      "串联电阻：控制大电流区的压降，以及正向高偏压处的斜率/弯折。",
-    ));
+    );
   } else if (/Rsh|Rsh_ohm/i.test(name) || /rsh|shunt|leak/i.test(nick)) {
-    notes.push(zh(language,
+    notes.push(
       "Shunt/leakage resistance: controls low-bias leakage. Smaller values mean more leakage current.",
-      "并联/漏电电阻：控制低偏压漏电；数值越小，漏电越明显。",
-    ));
+    );
   } else if (/Vt|Vbr|Vs|w_V/i.test(name)) {
-    notes.push(zh(language,
+    notes.push(
       "Voltage scale or threshold: moves where this empirical branch turns on along the voltage axis.",
-      "电压尺度或阈值：决定这个经验支路沿电压轴从哪里开始明显起作用。",
-    ));
+    );
   } else if (/^A$|scale|amplitude/i.test(name)) {
-    notes.push(zh(language,
+    notes.push(
       "Amplitude/current scale for this branch; compare it with the measured current range before trusting it.",
-      "该支路的幅值/电流尺度；可信前应和实测电流范围对照。",
-    ));
+    );
   } else {
-    notes.push(zh(language,
+    notes.push(
       "Model parameter for this component. Check whether its fitted value is near a bound or has large uncertainty.",
-      "该组件的模型参数。重点看它是否贴近边界，或不确定度是否很大。",
-    ));
+    );
   }
 
-  if (Number.isFinite(value) && ((lower !== null && lower !== undefined && Math.abs(value - lower) <= Math.max(Math.abs(value), 1) * 1e-6) || (upper !== null && upper !== undefined && Math.abs(value - upper) <= Math.max(Math.abs(value), 1) * 1e-6))) {
-    notes.push(zh(language, "It is sitting on a bound; widen bounds only if that remains physically reasonable.", "当前值贴近边界；只有在物理上合理时才应放宽边界。"));
+  if (
+    Number.isFinite(value) &&
+    ((lower !== null &&
+      lower !== undefined &&
+      Math.abs(value - lower) <= Math.max(Math.abs(value), 1) * 1e-6) ||
+      (upper !== null &&
+        upper !== undefined &&
+        Math.abs(value - upper) <= Math.max(Math.abs(value), 1) * 1e-6))
+  ) {
+    notes.push(
+      "It is sitting on a bound; widen bounds only if that remains physically reasonable.",
+    );
   }
-  if (Number.isFinite(value) && Number.isFinite(stderr) && stderr !== null && stderr !== undefined && Math.abs(value) > 0 && Math.abs(stderr / value) > 1) {
-    notes.push(zh(language, "The uncertainty is larger than the value, so this parameter is weakly identified by the current data/model.", "不确定度大于参数值，说明当前数据/模型对这个参数约束较弱。"));
+  if (
+    Number.isFinite(value) &&
+    Number.isFinite(stderr) &&
+    stderr !== null &&
+    stderr !== undefined &&
+    Math.abs(value) > 0 &&
+    Math.abs(stderr / value) > 1
+  ) {
+    notes.push(
+      "The uncertainty is larger than the value, so this parameter is weakly identified by the current data/model.",
+    );
   }
   return notes.join(" ");
 }
 
-export function parameterShortAssessment(result: FitResult, key: string, language: Language) {
+export function parameterShortAssessment(
+  result: FitResult,
+  key: string,
+  _language: Language,
+) {
   const p = result.parameters[key];
   if (!p) return "";
   const absValue = Math.abs(p.value);
-  const nearLower = p.lower !== null && p.lower !== undefined && Math.abs(p.value - p.lower) <= Math.max(absValue, 1) * 1e-6;
-  const nearUpper = p.upper !== null && p.upper !== undefined && Math.abs(p.value - p.upper) <= Math.max(absValue, 1) * 1e-6;
-  if (nearLower || nearUpper) return zh(language, "near bound - inspect range", "贴近边界 - 检查范围");
-  if (Number.isFinite(p.stderr) && p.stderr !== null && p.stderr !== undefined && absValue > 0 && Math.abs(p.stderr / p.value) > 1) {
-    return zh(language, "weakly identified", "约束较弱");
+  const nearLower =
+    p.lower !== null &&
+    p.lower !== undefined &&
+    Math.abs(p.value - p.lower) <= Math.max(absValue, 1) * 1e-6;
+  const nearUpper =
+    p.upper !== null &&
+    p.upper !== undefined &&
+    Math.abs(p.value - p.upper) <= Math.max(absValue, 1) * 1e-6;
+  if (nearLower || nearUpper) return "near bound - inspect range";
+  if (
+    Number.isFinite(p.stderr) &&
+    p.stderr !== null &&
+    p.stderr !== undefined &&
+    absValue > 0 &&
+    Math.abs(p.stderr / p.value) > 1
+  ) {
+    return "weakly identified";
   }
   const [, rawName] = key.split(".");
-  if (/^n$/i.test(rawName ?? "") && Number.isFinite(p.value) && p.value > 2) {
-    return zh(language, "n > 2 - check model/data", "n > 2 - 查模型/数据");
+  if (
+    /^n$/i.test(rawName ?? "") &&
+    Number.isFinite(p.value) &&
+    p.value > 2
+  ) {
+    return "n > 2 - check model/data";
   }
-  return zh(language, "plausible - review residuals", "基本可信 - 仍需看残差");
+  return "plausible - review residuals";
 }
 
-export function initialValueGuidance(name: string, spec: ParameterSpec, language: Language) {
+export function initialValueGuidance(
+  name: string,
+  spec: ParameterSpec,
+  _language: Language,
+) {
   const label = spec.label ?? name;
   if (/I0|I_?0/i.test(name) || /I0/i.test(label)) {
-    return zh(language,
-      "Initial-value hint: silicon junctions often start near 1e-12 A; wide-bandgap or very low-leakage devices may need 1e-20 A or smaller. If reverse leakage is visible, start near that current scale.",
-      "初始值提示：普通硅结可从 1e-12 A 附近开始；宽禁带或极低漏电器件可能需要 1e-20 A 或更小。若反偏漏电明显，可用漏电量级作起点。",
-    );
+    return "Initial-value hint: silicon junctions often start near 1e-12 A; wide-bandgap or very low-leakage devices may need 1e-20 A or smaller. If reverse leakage is visible, start near that current scale.";
   }
   if (/^n$/i.test(name)) {
-    return zh(language, "Typical start: 1 to 2. Values much above 2 often mean the model needs another current path or the data need review.", "典型初始值：1 到 2。明显大于 2 时，常表示模型需要额外电流通道或数据需要复查。");
+    return "Typical start: 1 to 2. Values much above 2 often mean the model needs another current path or the data need review.";
   }
   if (/Rs_ohm|^Rs$/i.test(name) || /Rs/i.test(label)) {
-    return zh(language, "Choose a value that roughly explains the high-current slope; try multistart if this is unknown.", "可按高电流区斜率粗估；若不确定，建议启用 multistart。");
+    return "Choose a value that roughly explains the high-current slope; try multistart if this is unknown.";
   }
   if (/Rsh|Rsh_ohm/i.test(name) || /Rsh/i.test(label)) {
-    return zh(language, "Choose a value close to low-bias V/I leakage resistance; very large values approximate no leakage branch.", "可按低偏压 V/I 漏电电阻粗估；极大值近似无漏电支路。");
+    return "Choose a value close to low-bias V/I leakage resistance; very large values approximate no leakage branch.";
   }
   return "";
 }
 
-export function fitQualityVerdict(result: FitResult, language: Language): { severity: Severity; title: string; message: string } {
+export function fitQualityVerdict(
+  result: FitResult,
+  _language: Language,
+): { severity: Severity; title: string; message: string } {
   const errors = result.warnings.filter((w) => w.severity === "error");
   const hasGraphSolver = result.warnings.some((w) => w.code === "graph_solver");
   if (result.reportable === false) {
     return {
       severity: "error",
-      title: zh(language, "Not reportable yet", "暂不适合报告"),
-      message: result.reportability_reason || zh(language,
+      title: "Not reportable yet",
+      message:
+        result.reportability_reason ||
         "The backend marked this fit as not reportable. Check warnings, solver mode, and numerical quality before using the result.",
-        "后端已将该拟合标记为暂不适合报告。请先检查警告、求解器模式和数值质量。",
-      ),
     };
   }
+
   const rmse = result.metrics.linear_rmse_A;
   const logMae = result.metrics.log_magnitude_mae_decades;
   const scale = dataScale(result.curves.current_measured_A);
@@ -157,75 +209,91 @@ export function fitQualityVerdict(result: FitResult, language: Language): { seve
   if (hasGraphSolver) {
     return {
       severity: "error",
-      title: zh(language, "Not reportable yet", "暂不适合报告"),
-      message: zh(language,
+      title: "Not reportable yet",
+      message:
         "graph_dc is diagnostic only. Use the legacy composite solver for reportable fits.",
-        "graph_dc 只用于诊断。正式报告拟合请使用 legacy composite solver。",
-      ),
     };
   }
   if (errors.length || !result.success || explosion || !Number.isFinite(rmse)) {
     return {
       severity: "error",
-      title: zh(language, "Not reportable yet", "暂不适合报告"),
-      message: zh(language,
-        `The fit has numerical/quality issues. RMSE is ${fmtEng(rmse, 4)} A versus a data scale near ${fmtEng(scale, 3)} A; check initial values, bounds, selected trace, and whether the model needs another branch.`,
-        `该拟合存在数值或质量问题。RMSE 为 ${fmtEng(rmse, 4)} A，而数据量级约 ${fmtEng(scale, 3)} A；建议检查初始值、边界、当前 trace，以及模型是否缺少支路。`,
-      ),
+      title: "Not reportable yet",
+      message: `The fit has numerical/quality issues. RMSE is ${fmtEng(
+        rmse,
+        4,
+      )} A versus a data scale near ${fmtEng(
+        scale,
+        3,
+      )} A; check initial values, bounds, selected trace, and whether the model needs another branch.`,
     };
   }
   if (rmseRatio > 0.25 || (Number.isFinite(logMae) && logMae > 0.3)) {
     return {
       severity: "error",
-      title: zh(language, "Poor fit - inspect", "拟合较差 - 需要检查"),
-      message: zh(language,
-        `The fit converged, but RMSE ratio (${fmtEng(rmseRatio, 3)}) or log-magnitude MAE (${fmtEng(logMae, 3)} decades) is too high for reporting.`,
-        `拟合已收敛，但 RMSE 比值 (${fmtEng(rmseRatio, 3)}) 或对数幅值 MAE (${fmtEng(logMae, 3)} decades) 对报告来说过高。`,
-      ),
+      title: "Poor fit - inspect",
+      message: `The fit converged, but RMSE ratio (${fmtEng(
+        rmseRatio,
+        3,
+      )}) or log-magnitude MAE (${fmtEng(
+        logMae,
+        3,
+      )} decades) is too high for reporting.`,
     };
   }
   if (rmseRatio > 0.1 || (Number.isFinite(logMae) && logMae > 0.1)) {
     return {
       severity: "warning",
-      title: zh(language, "Caution - inspect residuals", "谨慎 - 检查残差"),
-      message: zh(language,
+      title: "Caution - inspect residuals",
+      message:
         "The fit is usable for inspection, but residuals or log-magnitude error are large enough that parameter interpretation needs care.",
-        "该拟合可用于检查，但残差或对数幅值误差偏大，解释参数时需要谨慎。",
-      ),
     };
   }
   return {
     severity: "ok",
-    title: zh(language, "Looks numerically plausible", "数值上看起来可信"),
-    message: zh(language,
+    title: "Looks numerically plausible",
+    message:
       "The fit passed the current numerical checks. Still review residual structure and whether the parameter values make physical sense before reporting.",
-      "该拟合通过了当前数值检查。报告前仍应检查残差结构，并确认参数值在物理上合理。",
-    ),
   };
 }
 
-export function plotAnomalyMessage(result: FitResult | null, trace: TraceData, language: Language) {
+export function plotAnomalyMessage(
+  result: FitResult | null,
+  trace: TraceData,
+  _language: Language,
+) {
   if (!result) return null;
   const measuredScale = dataScale(trace.current_A);
   const maxFit = Math.max(...finiteAbs(result.curves.current_fit_A), 0);
   const maxResidual = Math.max(...finiteAbs(result.curves.residual_A), 0);
-  const nonFinite = [...result.curves.current_fit_A, ...result.curves.residual_A].some((v) => !Number.isFinite(v));
-  if (nonFinite || maxFit > Math.max(1e3, 1e8 * measuredScale) || maxResidual > Math.max(1e3, 1e8 * measuredScale)) {
-    return zh(language,
-      "Current display range is abnormal. The fit or residuals may have numerically diverged; check initial values, bounds, and whether this model can represent the selected trace.",
-      "当前显示范围异常。拟合曲线或残差可能发生数值发散；请检查初始值、边界，以及当前模型是否能描述选中的 trace。",
-    );
+  const nonFinite = [
+    ...result.curves.current_fit_A,
+    ...result.curves.residual_A,
+  ].some((v) => !Number.isFinite(v));
+  if (
+    nonFinite ||
+    maxFit > Math.max(1e3, 1e8 * measuredScale) ||
+    maxResidual > Math.max(1e3, 1e8 * measuredScale)
+  ) {
+    return "Current display range is abnormal. The fit or residuals may have numerically diverged; check initial values, bounds, and whether this model can represent the selected trace.";
   }
   return null;
 }
 
 export function parameterValueRows(model: ModelSpec, result: FitResult | null) {
-  const rows: { key: string; label: string; value: ParameterResult | ParameterSpec }[] = [];
+  const rows: {
+    key: string;
+    label: string;
+    value: ParameterResult | ParameterSpec;
+  }[] = [];
   for (const comp of [...model.core, ...model.series, ...model.parallel]) {
     const nick = String(comp.metadata?.nickname ?? comp.id);
     for (const [name, spec] of Object.entries(comp.params)) {
       const key = `${comp.id}.${name}`;
-      rows.push({ key, label: `${nick}.${spec.label ?? name}`, value: result?.parameters[key] ?? spec });
+      rows.push({
+        key,
+        label: `${nick}.${spec.label ?? name}`,
+        value: result?.parameters[key] ?? spec,
+      });
     }
   }
   return rows;
