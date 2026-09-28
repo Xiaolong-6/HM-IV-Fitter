@@ -9,6 +9,7 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
   const result = await page.evaluate(async () => {
     const worker = new Worker(
       new URL("browser-runtime.worker.js", window.location.href),
+      { type: "module" },
     );
     let nextId = 1;
 
