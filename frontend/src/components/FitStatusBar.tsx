@@ -170,7 +170,7 @@ export function FitStatusBar({
         title={t(language, "readyNoFit")}
       >
         <span className="fit-status-dot" aria-hidden="true" />
-        <span className="fit-status-text">{t(language, "readyNoFit")}</span>
+        <span className="fit-status-text">Ready</span>
       </div>
     );
   }
