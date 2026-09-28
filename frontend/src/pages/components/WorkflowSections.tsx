@@ -7,7 +7,7 @@ import type {
   ModelSpec,
   TraceData,
 } from "../../model/types";
-import type { AppView } from "../../components/WorkflowSidebar";
+import type { WorkflowStep } from "../../components/WorkflowTopNav";
 import { ErrorBoundary } from "../../components/ErrorBoundary";
 import { ModelBuilder } from "../../components/ModelBuilder";
 import { EquationPreview } from "../../components/EquationPreview";
@@ -139,7 +139,7 @@ export function FittingWorkflowPage({
   selectedTraceId: string | null;
   traces: TraceData[];
   setSelectedTraceId: (id: string) => void;
-  setActiveView: (view: AppView) => void;
+  setActiveView: (view: WorkflowStep) => void;
   config: FitConfig;
   setConfig: (config: FitConfig) => void;
   autoVoltageRange: { vMin: number | null; vMax: number | null };
