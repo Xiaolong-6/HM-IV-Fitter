@@ -6,7 +6,7 @@ from collections import Counter
 from math import isclose, isfinite
 
 from .component_registry import registry_by_key, registry_by_function
-from ivfitter.components.custom import validate_expression, validate_expression_symbols
+from ivfitter.components.custom import expression_function_names, validate_expression, validate_expression_symbols
 from .component_aliases import BIAS_DEPENDENT_CURRENT_TYPES, canonical_law_id
 from .model_spec import ComponentSpec, FitWarning, GraphComponent, GraphSpec, ModelSpec
 
@@ -44,6 +44,35 @@ _GRAPH_CUSTOM_VARIABLES = {
     "kB",
     "T",
 }
+
+
+_LEGACY_RESERVED_PARAMETER_NAMES = _LEGACY_CUSTOM_VARIABLES | expression_function_names()
+_GRAPH_RESERVED_PARAMETER_NAMES = {
+    "V",
+    "dV",
+    "I",
+    "absV",
+    "absI",
+    "kB",
+} | expression_function_names()
+
+
+def _reserved_parameter_warnings(
+    owner_id: str,
+    parameter_names: set[str],
+    reserved_names: set[str],
+    code: str,
+) -> list[FitWarning]:
+    collisions = sorted(set(parameter_names) & set(reserved_names))
+    if not collisions:
+        return []
+    return [
+        _warn(
+            code,
+            f"{owner_id}: parameter name(s) shadow solver/function symbols: {', '.join(collisions)}.",
+            "error",
+        )
+    ]
 
 
 def _parameter_warnings(owner_id: str, params) -> list[FitWarning]:
@@ -126,6 +155,12 @@ def _validate_graph_component(comp: GraphComponent) -> list[FitWarning]:
                     f"{comp.id}: behavior {behavior!r} requires placement {expected_placement!r}, not {comp.placement!r}.",
                     "error",
                 ))
+        warnings.extend(_reserved_parameter_warnings(
+            comp.id,
+            set(comp.params),
+            _GRAPH_RESERVED_PARAMETER_NAMES,
+            "graph_reserved_parameter_name",
+        ))
         warnings.extend(_validate_custom_expression_contract(
             owner_id=comp.id,
             expression=expression,
@@ -136,12 +171,21 @@ def _validate_graph_component(comp: GraphComponent) -> list[FitWarning]:
         if str((comp.metadata or {}).get("templateKey", "")) == "resistance":
             resistance_symbol = expression.strip()
             resistance = comp.params.get(resistance_symbol)
-            if resistance is not None and float(resistance.value) <= 0:
-                warnings.append(_warn(
-                    "graph_nonpositive_resistance",
-                    f"{comp.id}: built-in resistance must be greater than 0 ohm for graph solving.",
-                    "error",
-                ))
+            if resistance is not None:
+                if float(resistance.value) <= 0:
+                    warnings.append(_warn(
+                        "graph_nonpositive_resistance",
+                        f"{comp.id}: built-in resistance must be greater than 0 ohm for graph solving.",
+                        "error",
+                    ))
+                if bool(resistance.fit) and (
+                    resistance.lower is None or float(resistance.lower) <= 0
+                ):
+                    warnings.append(_warn(
+                        "graph_resistance_bound_includes_zero",
+                        f"{comp.id}: fitted built-in resistance requires a strictly positive lower bound.",
+                        "error",
+                    ))
         return warnings
 
     definition = registry_by_function().get(comp.function_type)
@@ -456,6 +500,12 @@ def validate_model_spec(model: ModelSpec) -> list[FitWarning]:
                         "error",
                     ))
             else:
+                warnings.extend(_reserved_parameter_warnings(
+                    comp.id,
+                    set(comp.params),
+                    _LEGACY_RESERVED_PARAMETER_NAMES,
+                    "custom_reserved_parameter_name",
+                ))
                 warnings.extend(_validate_custom_expression_contract(
                     owner_id=comp.id,
                     expression=expr,
