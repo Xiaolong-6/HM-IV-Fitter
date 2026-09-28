@@ -235,7 +235,7 @@ function legacyComponent(component: Mb3Component, isSeriesBridge: boolean): Comp
         Rs_ohm: parameterSpecFor(component, component.parameters[0]?.symbol ?? "R0", {
           symbol: "R0",
           value: 10,
-          lower: 0,
+          lower: 1e-12,
           upper: 1e9,
           fit: true,
           unit: "ohm",
