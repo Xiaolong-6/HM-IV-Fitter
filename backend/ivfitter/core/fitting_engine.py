@@ -13,6 +13,7 @@ from __future__ import annotations
 import concurrent.futures
 import copy
 import time
+import sys
 import numpy as np
 from scipy.optimize import least_squares
 
@@ -33,7 +34,11 @@ class FitTimeoutError(RuntimeError):
     """Raised when a fit exceeds the user-configured runtime budget."""
 
 
-_SCIPY_EXECUTOR = concurrent.futures.ThreadPoolExecutor(max_workers=1, thread_name_prefix="ivfit-scipy")
+_PYODIDE_RUNTIME = sys.platform == "emscripten"
+_SCIPY_EXECUTOR = None if _PYODIDE_RUNTIME else concurrent.futures.ThreadPoolExecutor(
+    max_workers=1,
+    thread_name_prefix="ivfit-scipy",
+)
 
 
 def _timeout_message(timeout_s: float) -> str:
@@ -58,8 +63,13 @@ def _least_squares_with_timeout(timeout_s: float, deadline: float | None, *args,
     to finish naturally while the caller returns a timeout result.
     """
     remaining = _remaining_timeout_s(deadline, timeout_s)
-    if remaining is None:
+    if remaining is None or _PYODIDE_RUNTIME:
+        # Pyodide runs the optimizer inside an isolated Web Worker and does not
+        # provide the CPython thread pool used by the desktop/server timeout
+        # wrapper. The residual callback still checks the same deadline, while
+        # the frontend Stop action can terminate the worker for hard cancellation.
         return least_squares(*args, **kwargs)
+    assert _SCIPY_EXECUTOR is not None
     future = _SCIPY_EXECUTOR.submit(least_squares, *args, **kwargs)
     try:
         result = future.result(timeout=remaining)
