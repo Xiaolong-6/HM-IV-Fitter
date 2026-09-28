@@ -504,7 +504,7 @@ function QuickSummary({ result, semantics, setActiveView, language }: { result: 
 
 
 function ReportEquivalentCircuit({ model, language }: { model: ModelSpec; language: Language }) {
-  return <section className="card report-section report-equivalent-circuit-card"><h2>{language === "zh" ? "等效电路" : "Equivalent circuit"}</h2><EquivalentCircuitView model={model} language={language} /></section>;
+  return <section className="card report-section report-equivalent-circuit-card"><h2>{"Equivalent circuit"}</h2><EquivalentCircuitView model={model} language={language} /></section>;
 }
 
 function ReportExportActions({
