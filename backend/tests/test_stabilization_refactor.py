@@ -148,13 +148,14 @@ def test_plot_empty_state_has_import_shortcut():
     text = (root / "frontend" / "src" / "components" / "PlotWorkspace.tsx").read_text(encoding="utf-8")
     assert "onImportData" in text
     assert "Import data" in text
-    assert "导入数据" in text
 
 
-def test_collapsed_language_icon_reflects_next_language():
+def test_production_top_navigation_has_no_language_toggle():
     root = Path(__file__).resolve().parents[2]
-    text = (root / "frontend" / "src" / "components" / "WorkflowSidebar.tsx").read_text(encoding="utf-8")
-    assert 'language === "en" ? "ZH" : "EN"' in text
+    text = (root / "frontend" / "src" / "components" / "WorkflowTopNav.tsx").read_text(encoding="utf-8")
+    assert "onLanguageChange" not in text
+    assert "中文" not in text
+    assert "workflow-language-control" not in text
 
 
 def test_parameter_table_uses_shared_scientific_format_for_extreme_values():
