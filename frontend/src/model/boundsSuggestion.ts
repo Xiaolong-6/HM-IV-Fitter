@@ -50,18 +50,24 @@ function sourceReason(model: ModelSpec, componentId: string, paramName: string):
   return sources?.[paramName]?.reason ?? null;
 }
 
-export function boundsSourceTitle(model: ModelSpec, componentId: string, paramName: string, language: "en" | "zh") {
-  const source = parameterSource(model, componentId, paramName, "bounds") ?? "registry_default";
+export function boundsSourceTitle(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+  _language: "en" = "en",
+) {
+  const source =
+    parameterSource(model, componentId, paramName, "bounds") ??
+    "registry_default";
   const reason = sourceReason(model, componentId, paramName);
-  const label = language === "zh"
-    ? source === "data_suggested" ? "边界来源：根据当前选中 trace 的数据范围建议。"
-      : source === "user_edited" ? "边界来源：用户手动修改。"
-      : source === "fit_derived_initial" ? "边界来源：拟合结果初值；边界本身未自动改变。"
-      : "边界来源：registry 默认值。"
-    : source === "data_suggested" ? "Bounds source: data-suggested from the selected trace."
-      : source === "user_edited" ? "Bounds source: user-edited."
-      : source === "fit_derived_initial" ? "Bounds source: fitted-as-initial; bounds themselves were not auto-changed."
-      : "Bounds source: registry default.";
+  const label =
+    source === "data_suggested"
+      ? "Bounds source: data-suggested from the selected trace."
+      : source === "user_edited"
+        ? "Bounds source: user-edited."
+        : source === "fit_derived_initial"
+          ? "Bounds source: fitted-as-initial; bounds themselves were not auto-changed."
+          : "Bounds source: registry default.";
   return reason ? `${label}\n${reason}` : label;
 }
 
