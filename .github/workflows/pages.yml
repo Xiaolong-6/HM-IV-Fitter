@@ -1,0 +1,75 @@
+name: Deploy HM-IV-Fitter prototype to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+  workflow_run:
+    workflows:
+      - "Static browser prototype"
+    branches:
+      - "feat/static-browser-standalone"
+    types:
+      - completed
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout validated prototype branch
+        uses: actions/checkout@v6
+        with:
+          ref: feat/static-browser-standalone
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npm install --prefix frontend --no-audit --no-fund
+
+      - name: Build standalone static site
+        run: npm run build:static
+
+      - name: Verify Pages payload
+        run: |
+          test -f frontend/dist/index.html
+          test -f frontend/dist/browser-runtime.worker.js
+          test -f frontend/dist/static-python/manifest.json
+          touch frontend/dist/.nojekyll
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: frontend/dist
+
+  deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
