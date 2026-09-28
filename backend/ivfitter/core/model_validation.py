@@ -6,9 +6,9 @@ from collections import Counter
 from math import isfinite
 
 from .component_registry import registry_by_key, registry_by_function
-from ivfitter.components.custom import validate_expression
+from ivfitter.components.custom import validate_expression, validate_expression_symbols
 from .component_aliases import BIAS_DEPENDENT_CURRENT_TYPES, canonical_law_id
-from .model_spec import ComponentSpec, FitWarning, ModelSpec
+from .model_spec import ComponentSpec, FitWarning, GraphComponent, GraphSpec, ModelSpec
 
 
 def _warn(code: str, message: str, severity: str = "warning") -> FitWarning:
@@ -19,6 +19,225 @@ def _component_groups(model: ModelSpec):
     for group_name in ("core", "series", "parallel"):
         for comp in getattr(model, group_name):
             yield group_name, comp
+
+
+_LEGACY_CUSTOM_VARIABLES = {
+    "V",
+    "Vi",
+    "Vj",
+    "absV",
+    "absVi",
+    "absVj",
+    "I",
+    "u",
+    "s",
+}
+
+_GRAPH_CUSTOM_VARIABLES = {
+    "V",
+    "dV",
+    "I",
+    "absV",
+    "absI",
+    "Vt",
+    "Vt_V",
+    "kB",
+    "T",
+}
+
+
+def _parameter_warnings(owner_id: str, params) -> list[FitWarning]:
+    warnings: list[FitWarning] = []
+    for name, spec in params.items():
+        if not isfinite(float(spec.value)):
+            warnings.append(_warn("nonfinite_parameter", f"{owner_id}.{name} is not finite.", "error"))
+        if spec.lower is not None and spec.value < spec.lower:
+            warnings.append(_warn("parameter_below_lower", f"{owner_id}.{name} is below its lower bound.", "error"))
+        if spec.upper is not None and spec.value > spec.upper:
+            warnings.append(_warn("parameter_above_upper", f"{owner_id}.{name} is above its upper bound.", "error"))
+        if name in {"I0_A", "Vs_V", "Vslope_V", "w_V", "n", "Rsh_ohm"} and spec.value <= 0:
+            warnings.append(_warn(
+                "nonpositive_physical_parameter",
+                f"{owner_id}.{name} should be positive for a physically meaningful model.",
+                "error",
+            ))
+    return warnings
+
+
+def _validate_custom_expression_contract(
+    *,
+    owner_id: str,
+    expression: str,
+    parameter_names: set[str],
+    allowed_variables: set[str],
+    code_prefix: str = "custom",
+) -> list[FitWarning]:
+    warnings: list[FitWarning] = []
+    expr = expression.strip()
+    if not expr:
+        warnings.append(_warn(
+            f"{code_prefix}_no_expression",
+            f"{owner_id}: custom expression is empty.",
+            "error",
+        ))
+        return warnings
+    try:
+        validate_expression(expr)
+        validate_expression_symbols(expr, set(parameter_names) | set(allowed_variables))
+    except (SyntaxError, ValueError) as exc:
+        warnings.append(_warn(
+            f"{code_prefix}_invalid_expression",
+            f"{owner_id}: custom expression is invalid: {exc}",
+            "error",
+        ))
+    return warnings
+
+
+def _validate_graph_component(comp: GraphComponent) -> list[FitWarning]:
+    warnings: list[FitWarning] = []
+    warnings.extend(_parameter_warnings(comp.id, comp.params))
+
+    behavior = str((comp.metadata or {}).get("behavior", "")).strip()
+    expression = str((comp.metadata or {}).get("expression", "")).strip()
+
+    if comp.function_type == "custom" or behavior in {
+        "R_of_V",
+        "I_of_V",
+        "dV_of_I",
+        "custom_residual",
+    }:
+        expected_contract = {
+            "R_of_V": ("current_branch", "parallel_current_branch"),
+            "I_of_V": ("current_branch", "parallel_current_branch"),
+            "dV_of_I": ("voltage_drop", "series_voltage_drop"),
+            "custom_residual": ("implicit_relation", "constraint"),
+        }.get(behavior)
+        if expected_contract is not None:
+            expected_form, expected_placement = expected_contract
+            if comp.evaluation_form != expected_form:
+                warnings.append(_warn(
+                    "graph_custom_evaluation_form",
+                    f"{comp.id}: behavior {behavior!r} requires evaluation_form {expected_form!r}, not {comp.evaluation_form!r}.",
+                    "error",
+                ))
+            if comp.placement != expected_placement:
+                warnings.append(_warn(
+                    "graph_custom_placement",
+                    f"{comp.id}: behavior {behavior!r} requires placement {expected_placement!r}, not {comp.placement!r}.",
+                    "error",
+                ))
+        warnings.extend(_validate_custom_expression_contract(
+            owner_id=comp.id,
+            expression=expression,
+            parameter_names=set(comp.params),
+            allowed_variables=_GRAPH_CUSTOM_VARIABLES,
+            code_prefix="graph_custom",
+        ))
+        return warnings
+
+    definition = registry_by_function().get(comp.function_type)
+    if definition is None:
+        warnings.append(_warn(
+            "graph_unknown_function",
+            f"{comp.id}: unknown graph function {comp.function_type}.",
+            "error",
+        ))
+        return warnings
+
+    if comp.placement not in set(definition.allowed_placements):
+        warnings.append(_warn(
+            "graph_unsupported_placement",
+            f"{comp.id}: {comp.function_type} cannot be placed as {comp.placement!r}.",
+            "error",
+        ))
+    if comp.evaluation_form is not None and comp.evaluation_form not in set(definition.available_forms):
+        warnings.append(_warn(
+            "graph_unsupported_evaluation_form",
+            f"{comp.id}: {comp.function_type} does not support evaluation_form {comp.evaluation_form!r}.",
+            "error",
+        ))
+    allowed = set(definition.allowed_polarities or [])
+    effective_polarity = comp.polarity or definition.default_polarity
+    if allowed and effective_polarity not in allowed:
+        warnings.append(_warn(
+            "graph_unsupported_polarity",
+            f"{comp.id}: {comp.function_type} does not allow polarity {effective_polarity!r}.",
+            "error",
+        ))
+    if not allowed and comp.polarity is not None:
+        warnings.append(_warn(
+            "graph_unsupported_polarity",
+            f"{comp.id}: {comp.function_type} does not use polarity.",
+            "error",
+        ))
+
+    expected = {parameter.name for parameter in definition.parameters}
+    missing = expected - set(comp.params)
+    direction_controlled_current = (
+        comp.function_type == "photocurrent_constant"
+        or comp.function_type in BIAS_DEPENDENT_CURRENT_TYPES
+    )
+    for name in sorted(missing):
+        if direction_controlled_current and name == "direction_sign":
+            continue
+        warnings.append(_warn(
+            "graph_missing_parameter",
+            f"{comp.id}: missing graph parameter {name}.",
+            "error",
+        ))
+    return warnings
+
+
+def _validate_graph_spec(graph: GraphSpec) -> list[FitWarning]:
+    warnings: list[FitWarning] = []
+    node_ids = [node.id for node in graph.nodes]
+    node_set = set(node_ids)
+    for node_id, count in Counter(node_ids).items():
+        if count > 1:
+            warnings.append(_warn(
+                "graph_duplicate_node_id",
+                f"Graph node id {node_id!r} appears {count} times.",
+                "error",
+            ))
+
+    if graph.reference_node not in node_set:
+        warnings.append(_warn(
+            "graph_missing_reference_node",
+            f"Graph reference node {graph.reference_node!r} is not defined.",
+            "error",
+        ))
+    for terminal in graph.terminals:
+        if terminal not in node_set:
+            warnings.append(_warn(
+                "graph_missing_terminal_node",
+                f"Graph terminal {terminal!r} is not defined.",
+                "error",
+            ))
+
+    component_ids = [comp.id for comp in graph.components]
+    for component_id, count in Counter(component_ids).items():
+        if count > 1:
+            warnings.append(_warn(
+                "graph_duplicate_component_id",
+                f"Graph component id {component_id!r} appears {count} times.",
+                "error",
+            ))
+
+    for comp in graph.components:
+        if comp.node_pos not in node_set:
+            warnings.append(_warn(
+                "graph_unknown_node",
+                f"{comp.id}: positive node {comp.node_pos!r} is not defined.",
+                "error",
+            ))
+        if comp.node_neg not in node_set:
+            warnings.append(_warn(
+                "graph_unknown_node",
+                f"{comp.id}: negative node {comp.node_neg!r} is not defined.",
+                "error",
+            ))
+        warnings.extend(_validate_graph_component(comp))
+    return warnings
 
 
 def _location_coherence_warnings(comp: ComponentSpec, placement: str, evaluation_form: str) -> list[FitWarning]:
@@ -89,15 +308,7 @@ def validate_component_against_registry(comp: ComponentSpec) -> list[FitWarning]
             # visible as a warning below.
             continue
         warnings.append(_warn("missing_parameter", f"{comp.id}: missing parameter {name}.", "error"))
-    for name, spec in comp.params.items():
-        if not isfinite(float(spec.value)):
-            warnings.append(_warn("nonfinite_parameter", f"{comp.id}.{name} is not finite.", "error"))
-        if spec.lower is not None and spec.value < spec.lower:
-            warnings.append(_warn("parameter_below_lower", f"{comp.id}.{name} is below its lower bound.", "error"))
-        if spec.upper is not None and spec.value > spec.upper:
-            warnings.append(_warn("parameter_above_upper", f"{comp.id}.{name} is above its upper bound.", "error"))
-        if name in {"I0_A", "Vs_V", "Vslope_V", "w_V", "n", "Rsh_ohm"} and spec.value <= 0:
-            warnings.append(_warn("nonpositive_physical_parameter", f"{comp.id}.{name} should be positive for a physically meaningful model.", "error"))
+    warnings.extend(_parameter_warnings(comp.id, comp.params))
     if comp.function_type == "photocurrent_constant" or comp.function_type in BIAS_DEPENDENT_CURRENT_TYPES:
         for name in ("Iph0_A", "Aph"):
             if name in comp.params and float(comp.params[name].value) < 0:
@@ -173,9 +384,13 @@ def validate_model_spec(model: ModelSpec) -> list[FitWarning]:
         warnings.extend(validate_component_against_registry(comp))
         if comp.function_type == "custom":
             expr = str(comp.metadata.get("expression", "")).strip()
-            if not expr:
-                warnings.append(_warn("custom_no_expression", f"{comp.id}: custom branch has no expression.", "error"))
-            else:
+            graph_ids = {
+                graph_component.id
+                for graph_component in (model.graph.components if model.graph else [])
+            }
+            if comp.id in graph_ids:
+                # Graph-native models are validated against graph solver variables
+                # below. The legacy bucket is only a compatibility projection.
                 try:
                     validate_expression(expr)
                 except (SyntaxError, ValueError) as exc:
@@ -184,10 +399,20 @@ def validate_model_spec(model: ModelSpec) -> list[FitWarning]:
                         f"{comp.id}: custom expression is invalid: {exc}",
                         "error",
                     ))
-                else:
-                    warnings.append(_warn(
-                        "custom_expression",
-                        f"{comp.id}: custom expression is fitted but should be documented in exported results.",
-                        "info",
-                    ))
+            else:
+                warnings.extend(_validate_custom_expression_contract(
+                    owner_id=comp.id,
+                    expression=expr,
+                    parameter_names=set(comp.params),
+                    allowed_variables=_LEGACY_CUSTOM_VARIABLES,
+                    code_prefix="custom",
+                ))
+            if expr:
+                warnings.append(_warn(
+                    "custom_expression",
+                    f"{comp.id}: custom expression is fitted but should be documented in exported results.",
+                    "info",
+                ))
+    if model.graph is not None:
+        warnings.extend(_validate_graph_spec(model.graph))
     return warnings
