@@ -85,10 +85,6 @@ jobs:
           print(f"Static Python payload: {len(files)} Python files")
           PY
 
-      - name: Install browser smoke dependency
-        working-directory: frontend
-        run: npm install --no-save --package-lock=false @playwright/test@1.55.0
-
       - name: Install Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
