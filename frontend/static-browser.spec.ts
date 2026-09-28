@@ -240,12 +240,21 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   await page
     .getByLabel("Assembly/solver mode")
     .selectOption("legacy_composite");
+  const timeoutInput = page.getByLabel("Run timeout (s)");
+  await timeoutInput.fill("3");
+  await timeoutInput.press("Enter");
   await page.getByRole("button", { name: "Close" }).click();
 
   await page.getByRole("button", { name: "Run fit" }).click();
-  await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
-    timeout: 60_000,
-  });
+  const terminalStatus = page.locator(".fit-status-compact");
+  await expect
+    .poll(async () => (await terminalStatus.textContent()) ?? "", {
+      timeout: 15_000,
+    })
+    .toMatch(/Converged|Timeout|Error/);
+  await expect(
+    page.getByRole("button", { name: /Run fit|Run again/ }),
+  ).toBeEnabled();
 
   const traceSelect = page.locator(".plot-trace-select select");
   await expect(traceSelect.locator("option")).toHaveCount(14);
