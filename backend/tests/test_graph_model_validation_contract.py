@@ -254,3 +254,63 @@ def test_graph_temperature_parameter_must_remain_fixed():
     )
 
     assert "graph_temperature_must_be_fixed" in error_codes(graph_model(component))
+
+
+def test_graph_custom_parameter_cannot_shadow_solver_variable_or_function():
+    variable_shadow = GraphComponent(
+        id="C1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"V": p(2.0)},
+        metadata={"behavior": "I_of_V", "expression": "V"},
+    )
+    function_shadow = GraphComponent(
+        id="C2",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"exp": p(2.0), "A": p(1.0)},
+        metadata={"behavior": "I_of_V", "expression": "A*exp(V)"},
+    )
+    kb_shadow = GraphComponent(
+        id="C3",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"kB": p(1.0)},
+        metadata={"behavior": "I_of_V", "expression": "kB"},
+    )
+
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(variable_shadow))
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(function_shadow))
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(kb_shadow))
+
+
+def test_fitted_builtin_resistance_requires_strictly_positive_lower_bound():
+    component = GraphComponent(
+        id="R1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"R": p(1000.0, 0.0, 1e9, fit=True, unit="ohm")},
+        metadata={
+            "behavior": "R_of_V",
+            "expression": "R",
+            "templateKey": "resistance",
+        },
+    )
+
+    assert "graph_resistance_bound_includes_zero" in error_codes(graph_model(component))
