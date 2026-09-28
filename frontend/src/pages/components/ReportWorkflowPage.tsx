@@ -1,4 +1,3 @@
-import { useState, type PointerEvent as ReactPointerEvent } from "react";
 import type { FitResult, FitSessionStats, ModelSpec, ParameterResult, TraceData } from "../../model/types";
 import type { FitLifecycleState } from "../../model/fitLifecycle";
 import type { WorkflowStep } from "../../components/WorkflowTopNav";
@@ -497,37 +496,62 @@ function ReportEquivalentCircuit({ model, language }: { model: ModelSpec; langua
   return <section className="card report-section report-equivalent-circuit-card"><h2>{language === "zh" ? "等效电路" : "Equivalent circuit"}</h2><EquivalentCircuitView model={model} language={language} /></section>;
 }
 
-function FloatingExports({ result, report, invalid, reportMessage, onExportReportHtml, onExportReportCsv, setActiveView, language }: { result: FitResult | null; report: string; invalid: boolean | FitResult | null; reportMessage: string; onExportReportHtml: () => void; onExportReportCsv: () => void; setActiveView: (view: WorkflowStep) => void; language: Language }) {
-  const [pos, setPos] = useState({ x: 112, y: 96 });
-  const [drag, setDrag] = useState<{ dx: number; dy: number } | null>(null);
-  function clampPosition(x: number, y: number) {
-    const sidebarRight = document.querySelector(".sidebar")?.getBoundingClientRect().right ?? 84;
-    const minX = Math.max(84, sidebarRight + 10);
-    const maxX = Math.max(minX, window.innerWidth - 292);
-    const minY = 8;
-    const maxY = Math.max(minY, window.innerHeight - 220);
-    return { x: Math.min(Math.max(x, minX), maxX), y: Math.min(Math.max(y, minY), maxY) };
-  }
-  function start(event: ReactPointerEvent<HTMLDivElement>) {
-    const target = event.currentTarget.getBoundingClientRect();
-    setDrag({ dx: event.clientX - target.left, dy: event.clientY - target.top });
-    event.currentTarget.setPointerCapture(event.pointerId);
-  }
-  function move(event: ReactPointerEvent<HTMLDivElement>) {
-    if (!drag) return;
-    setPos(clampPosition(event.clientX - drag.dx, event.clientY - drag.dy));
-  }
-  function end() { setDrag(null); setPos((current) => clampPosition(current.x, current.y)); }
+function ReportExportActions({
+  result,
+  report,
+  invalid,
+  reportMessage,
+  onExportReportHtml,
+  onExportReportCsv,
+  language,
+}: {
+  result: FitResult | null;
+  report: string;
+  invalid: boolean | FitResult | null;
+  reportMessage: string;
+  onExportReportHtml: () => void;
+  onExportReportCsv: () => void;
+  language: Language;
+}) {
+  if (!result && !report) return null;
   const diagnostic = Boolean(invalid);
-  return <aside className={`card floating-report-exports ${diagnostic ? "diagnostic-export" : ""}`} style={{ left: pos.x, top: pos.y }}>
-    <div className="floating-report-exports-head" onPointerDown={start} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
-      <h2>{rt(language, "exports")}</h2><span className="floating-drag-icon" aria-label={language === "zh" ? "拖动" : "Drag"} title={language === "zh" ? "拖动" : "Drag"}>↕↔</span>
-    </div>
-    {diagnostic ? <p className="diagnostic-export-help">{rt(language, "diagnosticExportHelp")}</p> : null}
-    <div className="report-side-action-links export-diagnostics-actions report-workflow-shortcuts"><button type="button" onClick={() => setActiveView("data")}>{rt(language, "workflowData")}</button><button type="button" onClick={() => setActiveView("model")}>{rt(language, "workflowModel")}</button><button type="button" onClick={() => setActiveView("fitting")}>{rt(language, "workflowFitting")}</button></div>
-    <div className="report-actions report-export-actions-grid"><button type="button" className="primary" disabled={!result} onClick={onExportReportHtml}>{diagnostic ? rt(language, "downloadDiagnosticHtml") : rt(language, "downloadHtml")}</button><button type="button" disabled={!report} onClick={onExportReportCsv}>{diagnostic ? rt(language, "downloadDiagnosticCsv") : rt(language, "downloadCsv")}</button></div>
-    {reportMessage ? <p className="muted">{reportMessage}</p> : null}
-  </aside>;
+
+  return (
+    <section
+      className={`card report-section report-export-section ${diagnostic ? "diagnostic-export" : ""}`}
+    >
+      <div className="report-section-heading">
+        <div>
+          <h2>{rt(language, "exports")}</h2>
+          {diagnostic ? (
+            <p className="muted">{rt(language, "diagnosticExportHelp")}</p>
+          ) : null}
+        </div>
+        <div className="report-actions report-export-actions-grid">
+          <button
+            type="button"
+            className="primary"
+            disabled={!result}
+            onClick={onExportReportHtml}
+          >
+            {diagnostic
+              ? rt(language, "downloadDiagnosticHtml")
+              : rt(language, "downloadHtml")}
+          </button>
+          <button
+            type="button"
+            disabled={!report}
+            onClick={onExportReportCsv}
+          >
+            {diagnostic
+              ? rt(language, "downloadDiagnosticCsv")
+              : rt(language, "downloadCsv")}
+          </button>
+        </div>
+      </div>
+      {reportMessage ? <p className="muted">{reportMessage}</p> : null}
+    </section>
+  );
 }
 
 export function ReportWorkflowPage({ selectedTrace, hasSelectedTrace, model, result, report, reportMessage, isFitting, fitLifecycle, fitPromotionNotice, fitSessionStats, onExportReportCsv, onExportReportHtml, setActiveView, language, appVersion, leftPct, onResizeStart }: { selectedTrace: TraceData; hasSelectedTrace: boolean; model: ModelSpec; result: FitResult | null; report: string; reportMessage: string; reportAvailable: boolean; isFitting: boolean; fitLifecycle: FitLifecycleState; fitPromotionNotice: string | null; fitSessionStats: FitSessionStats; onExportReportCsv: () => void; onExportReportHtml: () => void; setActiveView: (view: WorkflowStep) => void; language: Language; appVersion: string; leftPct: number; onResizeStart: (event: unknown) => void; }) {
@@ -544,7 +568,7 @@ export function ReportWorkflowPage({ selectedTrace, hasSelectedTrace, model, res
   void leftPct;
   void onResizeStart;
   return <section className="workflow-page report-page scroll-page report-page-single-column scientific-report-page">
-    <FloatingExports result={result} report={report} invalid={invalid} reportMessage={reportMessage} onExportReportHtml={onExportReportHtml} onExportReportCsv={onExportReportCsv} setActiveView={setActiveView} language={language} />
+    <ReportExportActions result={result} report={report} invalid={invalid} reportMessage={reportMessage} onExportReportHtml={onExportReportHtml} onExportReportCsv={onExportReportCsv} language={language} />
     <main className="report-main-column report-document-flow">
       <ReportHero result={result} semantics={semantics} traceName={traceName} model={model} appVersion={appVersion} verdict={verdict} isFitting={isFitting} setActiveView={setActiveView} language={language} />
       <WarningsAndDiagnostics result={result} semantics={semantics} language={language} />
