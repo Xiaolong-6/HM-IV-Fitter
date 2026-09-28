@@ -167,18 +167,18 @@ function nickname(comp: ComponentSpec) {
 function componentSummary(comp: ComponentSpec, language: Language) {
   const location =
     comp.placement?.includes("series") || comp.location === "series"
-      ? language === "zh" ? "主路" : "main path"
-      : language === "zh" ? "电流支路" : "current branch";
+      ? "main path"
+      : "current branch";
   const role =
     comp.function_type === "diode" || /shockley/i.test(comp.law_id ?? "")
-      ? language === "zh" ? "Shockley 二极管" : "Shockley diode"
+      ? "Shockley diode"
       : /ohmic/i.test(comp.law_id ?? "")
         ? comp.location === "series"
-          ? language === "zh" ? "欧姆串联电阻" : "Ohmic series resistance"
-          : language === "zh" ? "欧姆漏电/旁路" : "Ohmic leakage/shunt"
+          ? "Ohmic series resistance"
+          : "Ohmic leakage/shunt"
         : comp.function_type === "series_diode_barrier"
-          ? language === "zh" ? "类二极管串联势垒压降" : "diode-like series barrier drop"
-          : language === "zh" ? "经验模型项" : "empirical model term";
+          ? "diode-like series barrier drop"
+          : "empirical model term";
   return `${role} · ${location}`;
 }
 
