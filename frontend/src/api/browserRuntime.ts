@@ -45,7 +45,7 @@ function disposeWorker(reason?: unknown) {
 function ensureWorker(): Worker {
   if (worker) return worker;
 
-  const next = new Worker(workerUrl());
+  const next = new Worker(workerUrl(), { type: "module" });
   next.onmessage = (event: MessageEvent<BrowserWorkerResponse>) => {
     const message = event.data;
     const request = pending.get(message.id);
