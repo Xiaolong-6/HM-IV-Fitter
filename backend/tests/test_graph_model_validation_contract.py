@@ -231,3 +231,26 @@ def test_graph_temperature_must_match_model_temperature():
     model.temperature_K = 300.0
 
     assert "graph_temperature_mismatch" in error_codes(model)
+
+
+def test_graph_temperature_parameter_must_remain_fixed():
+    component = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(300.0, 250.0, 380.0, fit=True),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+
+    assert "graph_temperature_must_be_fixed" in error_codes(graph_model(component))
