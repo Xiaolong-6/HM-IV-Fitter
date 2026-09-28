@@ -13,6 +13,14 @@ let runtimePromise = null;
 let bridgeCall = null;
 let runtimeBaseUrl = null;
 
+function postRuntimeStatus(state, error) {
+  self.postMessage({
+    type: "runtime-status",
+    state,
+    ...(error ? { error } : {}),
+  });
+}
+
 function normalizeBaseUrl(value) {
   const url = new URL(value, self.location.href);
   return url.href.endsWith("/") ? url.href : `${url.href}/`;
@@ -76,6 +84,7 @@ async function initializeRuntime(baseUrl) {
   }
 
   runtimeBaseUrl = normalizedBaseUrl;
+  postRuntimeStatus("loading");
   runtimePromise = (async () => {
     const pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX_URL });
     await pyodide.loadPackage(["numpy", "scipy", "pandas", "pydantic"]);
@@ -84,11 +93,14 @@ async function initializeRuntime(baseUrl) {
   })();
 
   try {
-    return await runtimePromise;
+    const pyodide = await runtimePromise;
+    postRuntimeStatus("ready");
+    return pyodide;
   } catch (error) {
     runtimePromise = null;
     runtimeBaseUrl = null;
     bridgeCall = null;
+    postRuntimeStatus("error", errorMessage(error));
     throw error;
   }
 }
