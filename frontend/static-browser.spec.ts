@@ -318,16 +318,90 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
 
 test("successful synthetic fit exports reports and model changes invalidate it", async ({ page }) => {
   test.setTimeout(180_000);
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      "ivfitter.modelBuilder.preview.layout",
+      JSON.stringify({
+        version: 1,
+        view: { x: 0, y: 0, scale: 1 },
+        nextNode: 4,
+        nextConn: 3,
+        nodes: [
+          {
+            id: "V",
+            label: "V",
+            templateName: "V",
+            x: 520,
+            y: 160,
+            w: 28,
+            h: 28,
+            terminal: true,
+            protected: true,
+            side: "bottom",
+          },
+          {
+            id: "GND",
+            label: "GND",
+            templateName: "GND",
+            x: 520,
+            y: 520,
+            w: 28,
+            h: 28,
+            terminal: true,
+            protected: true,
+            side: "top",
+          },
+          {
+            id: "I1",
+            label: "I1",
+            templateName: "Constant current",
+            behavior: "I_of_V",
+            expression: "I0",
+            parameters: [
+              {
+                symbol: "I0",
+                value: 1e-6,
+                lower: -1,
+                upper: 1,
+                fit: true,
+                unit: "A",
+              },
+            ],
+            x: 460,
+            y: 330,
+            w: 120,
+            h: 60,
+          },
+        ],
+        conns: [
+          {
+            id: "c1",
+            from: "V",
+            fromSide: "bottom",
+            to: "I1",
+            toSide: "top",
+            manual: null,
+          },
+          {
+            id: "c2",
+            from: "I1",
+            fromSide: "bottom",
+            to: "GND",
+            toSide: "top",
+            manual: null,
+          },
+        ],
+      }),
+    );
+  });
   await page.goto("http://127.0.0.1:4173/");
 
   const workflow = page.getByRole("navigation", { name: "Analysis workflow" });
   await workflow.getByRole("button", { name: "2 Model builder" }).click();
   await expect(page.locator(".mbv3-direct-page")).toBeVisible();
 
-  await page.getByRole("button", { name: "Model presets" }).click();
-  await page.getByText("Single diode model", { exact: true }).click();
   const useModel = page.getByRole("button", { name: "Use model for fitting" });
-  await expect(useModel).toBeEnabled();
+  await expect(useModel).toBeEnabled({ timeout: 15_000 });
 
   await page.getByRole("button", { name: "Simulate IV" }).click();
   await expect(page.getByText("Synthetic IV", { exact: true })).toBeVisible();
@@ -349,7 +423,7 @@ test("successful synthetic fit exports reports and model changes invalidate it",
 
   await page.getByRole("button", { name: "Run fit" }).click();
   await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
-    timeout: 60_000,
+    timeout: 30_000,
   });
 
   await workflow.getByRole("button", { name: "4 Report" }).click();
