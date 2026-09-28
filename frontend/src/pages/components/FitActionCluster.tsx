@@ -5,6 +5,7 @@ import { t } from "../../model/i18n";
 
 export function FitActionButtons({
   hasSelectedTrace,
+  hasRunnableModel,
   isFitting,
   result,
   language,
@@ -12,6 +13,7 @@ export function FitActionButtons({
   onStopFit,
 }: {
   hasSelectedTrace: boolean;
+  hasRunnableModel: boolean;
   isFitting: boolean;
   result: FitResult | null;
   language: Language;
@@ -19,7 +21,7 @@ export function FitActionButtons({
   onStopFit: () => void;
 }) {
   const completed = !!result && !isFitting;
-  const canRun = hasSelectedTrace && !isFitting;
+  const canRun = hasSelectedTrace && hasRunnableModel && !isFitting;
 
   let label: string;
   let icon: string;
@@ -39,8 +41,15 @@ export function FitActionButtons({
   } else {
     label = t(language, "runFit");
     icon = "▶";
-    className = hasSelectedTrace ? "primary" : "fit-action-unavailable";
-    title = !hasSelectedTrace ? ("Import data before running a fit.") : undefined;
+    className =
+      hasSelectedTrace && hasRunnableModel
+        ? "primary"
+        : "fit-action-unavailable";
+    title = !hasSelectedTrace
+      ? "Import data before running a fit."
+      : !hasRunnableModel
+        ? "Build a complete V-to-GND model before fitting."
+        : undefined;
   }
 
   return (
@@ -90,6 +99,7 @@ export function FitReportButton({
 
 export function FitMessages({
   hasTrace,
+  hasRunnableModel,
   error,
   isFitting,
   fitPromotionNotice,
@@ -97,6 +107,7 @@ export function FitMessages({
   onRetry,
 }: {
   hasTrace: boolean;
+  hasRunnableModel: boolean;
   error: string | null;
   isFitting: boolean;
   fitPromotionNotice: string | null;
@@ -109,6 +120,12 @@ export function FitMessages({
         <div className="fit-primary-message empty">
           <strong>No trace loaded.</strong>
           <span>Import data or load a synthetic example before fitting.</span>
+        </div>
+      ) : null}
+      {hasTrace && !hasRunnableModel && !error ? (
+        <div className="fit-primary-message empty">
+          <strong>No runnable model.</strong>
+          <span>Build a complete V-to-GND model in Model builder before fitting.</span>
         </div>
       ) : null}
       {fitPromotionNotice ? (
