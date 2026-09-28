@@ -1,8 +1,10 @@
 /* Browser-local numerical runtime for the static IV-fitter build.
  *
- * This file is intentionally a classic Worker so Pyodide's CDN loader can be
- * initialized with importScripts. All fitting work stays off the React thread.
+ * Pyodide 314 requires a module-type Worker because its runtime is an ES module.
+ * All fitting work stays off the React thread.
  */
+
+import { loadPyodide } from "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/pyodide.mjs";
 
 const PYODIDE_INDEX_URL = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
 const PYTHON_ROOT = "/opt/ivfitter-static";
@@ -75,11 +77,6 @@ async function initializeRuntime(baseUrl) {
 
   runtimeBaseUrl = normalizedBaseUrl;
   runtimePromise = (async () => {
-    importScripts(`${PYODIDE_INDEX_URL}pyodide.js`);
-    if (typeof loadPyodide !== "function") {
-      throw new Error("Pyodide loader did not initialize.");
-    }
-
     const pyodide = await loadPyodide({ indexURL: PYODIDE_INDEX_URL });
     await pyodide.loadPackage(["numpy", "scipy", "pandas", "pydantic"]);
     await installProjectSources(pyodide, normalizedBaseUrl);
