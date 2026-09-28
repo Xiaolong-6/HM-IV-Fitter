@@ -212,6 +212,53 @@ export function fittedParameterForModelParameter(
   return result.parameters[parameterKey(componentId, graphName)];
 }
 
+export function fittedParameterForGraphParameter(
+  model: ModelSpec,
+  result: FitResult | null,
+  componentId: string,
+  graphParamName: string,
+): ParameterResult | undefined {
+  if (!result) return undefined;
+
+  const direct = result.parameters[parameterKey(componentId, graphParamName)];
+  if (direct) return direct;
+
+  const graphComponent = model.graph?.components.find(
+    (item) => item.id === componentId,
+  );
+  const graphSpec = graphComponent?.params[graphParamName];
+  const graphLabel = graphSpec?.label?.trim();
+  const graphToken = parameterAliasToken(graphParamName);
+
+  const candidates: string[] = [];
+  for (const location of ["series", "core", "parallel"] as const) {
+    const legacyComponent = model[location].find(
+      (item) => item.id === componentId,
+    );
+    if (!legacyComponent) continue;
+    for (const [legacyName, legacySpec] of Object.entries(
+      legacyComponent.params,
+    )) {
+      const legacyLabel = legacySpec.label?.trim();
+      if (
+        legacyName === graphParamName ||
+        legacyLabel === graphParamName ||
+        (graphLabel != null && graphLabel.length > 0 && legacyName === graphLabel) ||
+        (graphLabel != null &&
+          graphLabel.length > 0 &&
+          legacyLabel === graphLabel) ||
+        parameterAliasToken(legacyName) === graphToken
+      ) {
+        candidates.push(legacyName);
+      }
+    }
+  }
+
+  const unique = [...new Set(candidates)];
+  if (unique.length !== 1) return undefined;
+  return result.parameters[parameterKey(componentId, unique[0])];
+}
+
 function markFitDerivedInitial(
   metadata: Record<string, unknown>,
   paramName: string,
@@ -271,7 +318,12 @@ function seedGraphProjection(model: ModelSpec, result: FitResult): ModelSpec {
     const metadata = { ...(component.metadata ?? {}) };
     const params = Object.fromEntries(
       Object.entries(component.params).map(([paramName, spec]) => {
-        const fitted = result.parameters[parameterKey(component.id, paramName)];
+        const fitted = fittedParameterForGraphParameter(
+          model,
+          result,
+          component.id,
+          paramName,
+        );
         if (
           !fitted ||
           fitted.fixed ||
@@ -297,6 +349,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function seedModelBuilderGraphMetadata(
   candidate: unknown,
+  model: ModelSpec,
   result: FitResult,
 ): unknown {
   if (!isRecord(candidate) || !Array.isArray(candidate.components)) {
@@ -320,10 +373,12 @@ function seedModelBuilderGraphMetadata(
           ) {
             return rawParameter;
           }
-          const fitted =
-            result.parameters[
-              parameterKey(rawComponent.id as string, rawParameter.symbol)
-            ];
+          const fitted = fittedParameterForGraphParameter(
+            model,
+            result,
+            rawComponent.id as string,
+            rawParameter.symbol,
+          );
           if (!fitted || fitted.fixed || !Number.isFinite(fitted.value)) {
             return rawParameter;
           }
@@ -346,6 +401,7 @@ function seedModelBuilderMetadata(
     if (!(key in next.graph.metadata)) continue;
     next.graph.metadata[key] = seedModelBuilderGraphMetadata(
       next.graph.metadata[key],
+      model,
       result,
     );
   }
