@@ -405,6 +405,7 @@ test("successful synthetic fit exports reports and model changes invalidate it",
 
   await page.getByRole("button", { name: "Simulate IV" }).click();
   await expect(page.getByText("Synthetic IV", { exact: true })).toBeVisible();
+  await page.getByLabel("V step").fill("0.5");
   await page.getByRole("button", { name: "Generate and import" }).click();
   await expect(page.getByText("Synthetic trace generated and imported.")).toBeVisible({
     timeout: 60_000,
@@ -415,7 +416,7 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await expect(page.locator(".fitting-page-one-column")).toBeVisible();
 
   await page.getByRole("button", { name: "Advanced" }).click();
-  await page.getByLabel("Assembly/solver mode").selectOption("legacy_composite");
+  await page.getByLabel("Assembly/solver mode").selectOption("graph_dc");
   const timeoutInput = page.getByLabel("Run timeout (s)");
   await timeoutInput.fill("20");
   await timeoutInput.press("Enter");
