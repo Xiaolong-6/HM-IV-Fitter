@@ -153,4 +153,25 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
     path: "test-results/four-step-import.png",
     fullPage: true,
   });
+
+  await workflow.getByRole("button", { name: "2 Model builder" }).click();
+  await expect(page.locator(".mbv3-direct-page")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-model.png",
+    fullPage: true,
+  });
+
+  await workflow.getByRole("button", { name: "3 Fit" }).click();
+  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-fit.png",
+    fullPage: true,
+  });
+
+  await workflow.getByRole("button", { name: "4 Report" }).click();
+  await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await page.screenshot({
+    path: "test-results/four-step-report.png",
+    fullPage: true,
+  });
 });
