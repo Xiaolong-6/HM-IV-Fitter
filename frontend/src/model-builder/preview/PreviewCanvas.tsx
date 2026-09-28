@@ -428,9 +428,14 @@ export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticToo
     warnings: compileWarnings.length ? compileWarnings : circuitStatus.warnings,
   };
 
+  const previewUrl = new URL(
+    "model-builder-preview.html",
+    new URL(import.meta.env.BASE_URL || "./", window.location.href),
+  ).toString();
+
   return (
     <div ref={shellRef} className="mb-preview-shell" onPointerDownCapture={hideFloatingMenus}>
-      <iframe ref={frameRef} className="mb-preview-frame" src="/model-builder-preview.html" title="Model Builder canvas" onLoad={handleFrameLoad} />
+      <iframe ref={frameRef} className="mb-preview-frame" src={previewUrl} title="Model Builder canvas" onLoad={handleFrameLoad} />
       <div className="mb-preview-overlay" aria-label="Model Builder overlay">
         <PreviewToolbar
           circuitStatus={effectiveCircuitStatus}
