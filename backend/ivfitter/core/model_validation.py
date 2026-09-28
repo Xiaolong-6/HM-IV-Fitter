@@ -6,6 +6,7 @@ from collections import Counter
 from math import isfinite
 
 from .component_registry import registry_by_key, registry_by_function
+from ivfitter.components.custom import validate_expression
 from .component_aliases import BIAS_DEPENDENT_CURRENT_TYPES, canonical_law_id
 from .model_spec import ComponentSpec, FitWarning, ModelSpec
 
@@ -74,7 +75,11 @@ def validate_component_against_registry(comp: ComponentSpec) -> list[FitWarning]
         warnings.append(_warn("unsupported_polarity", f"{comp.id}: {comp.function_type} does not allow polarity {effective_polarity!r}.", "error"))
     if not allowed and comp.polarity is not None:
         warnings.append(_warn("unsupported_polarity", f"{comp.id}: {comp.function_type} does not use polarity; remove stored polarity {comp.polarity!r}.", "error"))
-    expected = {p.name for p in definition.parameters}
+    # Built-in laws have a fixed registry parameter schema. Custom-expression
+    # laws intentionally do not: Model Builder may compile arbitrary safe
+    # symbols (for example I0, A/B, or user-defined coefficients) and the
+    # evaluator consumes the parameters referenced by the expression itself.
+    expected = set() if comp.function_type == "custom" else {p.name for p in definition.parameters}
     missing = expected - set(comp.params)
     direction_controlled_current = comp.function_type == "photocurrent_constant" or comp.function_type in BIAS_DEPENDENT_CURRENT_TYPES
     for name in sorted(missing):
@@ -171,5 +176,18 @@ def validate_model_spec(model: ModelSpec) -> list[FitWarning]:
             if not expr:
                 warnings.append(_warn("custom_no_expression", f"{comp.id}: custom branch has no expression.", "error"))
             else:
-                warnings.append(_warn("custom_expression", f"{comp.id}: custom expression is fitted but should be documented in exported results.", "info"))
+                try:
+                    validate_expression(expr)
+                except (SyntaxError, ValueError) as exc:
+                    warnings.append(_warn(
+                        "custom_invalid_expression",
+                        f"{comp.id}: custom expression is invalid: {exc}",
+                        "error",
+                    ))
+                else:
+                    warnings.append(_warn(
+                        "custom_expression",
+                        f"{comp.id}: custom expression is fitted but should be documented in exported results.",
+                        "info",
+                    ))
     return warnings
