@@ -171,11 +171,11 @@ function expressionIdentifiers(expression: string) {
   return [...new Set(expression.match(/\b[A-Za-z_]\w*\b/g) ?? [])];
 }
 
-function componentContractWarnings(graph: Mb3Graph): string[] {
+function componentContractWarnings(components: Mb3Component[]): string[] {
   const warnings: string[] = [];
   const temperatures: Array<{ id: string; value: number }> = [];
 
-  for (const component of graph.components) {
+  for (const component of components) {
     const label = component.label || component.id;
     const symbols = component.parameters.map((parameter) => parameter.symbol.trim());
     const duplicateSymbols = symbols.filter(
@@ -737,7 +737,7 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
   const rootForPort = (ref: Mb3PortRef) => dsu.find(portKey(ref));
   const positiveRoot = dsu.find(`node:${graph.terminals.positive}`);
   const groundRoot = dsu.find(`node:${graph.terminals.ground}`);
-  const warnings: string[] = componentContractWarnings(graph);
+  const warnings: string[] = [];
   const componentAdjacency = new Map<string, Set<string>>();
 
   for (const component of graph.components) {
@@ -802,6 +802,8 @@ export function compileMb3Graph(graph: Mb3Graph, baseModel?: ModelSpec): Mb3Comp
         );
       })
     : [];
+
+  warnings.push(...componentContractWarnings(activeComponents));
 
   const openComponents = graph.components.filter((component) => {
     const hasPositiveWire = graph.wires.some((wire) =>
