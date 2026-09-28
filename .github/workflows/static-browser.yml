@@ -9,6 +9,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "docs/STATIC_BROWSER_PLAN.md"
+      - "docs/STATIC_BROWSER_STABILIZATION.md"
       - "package.json"
       - "vite.config.ts"
       - ".github/workflows/static-browser.yml"
