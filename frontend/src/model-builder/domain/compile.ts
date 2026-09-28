@@ -408,7 +408,6 @@ function legacyComponent(component: Mb3Component, isSeriesBridge: boolean): Comp
       law_id: "ohmic",
       evaluation_form: "voltage_drop",
       placement: "series_voltage_drop",
-      polarity: "forward",
       params: {
         Rs_ohm: parameterSpecFor(component, component.parameters[0]?.symbol ?? "R0", {
           symbol: "R0",
@@ -431,7 +430,6 @@ function legacyComponent(component: Mb3Component, isSeriesBridge: boolean): Comp
       law_id: "ohmic",
       evaluation_form: "current_branch",
       placement: "parallel_current_branch",
-      polarity: "forward",
       params: {
         Rsh_ohm: parameterSpecFor(component, component.parameters[0]?.symbol ?? "R0", {
           symbol: "R0",
