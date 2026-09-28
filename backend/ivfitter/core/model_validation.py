@@ -229,6 +229,12 @@ def _validate_graph_spec(graph: GraphSpec, model_temperature_K: float) -> list[F
         if temperature is None:
             continue
         value = float(temperature.value)
+        if bool(temperature.fit):
+            warnings.append(_warn(
+                "graph_temperature_must_be_fixed",
+                f"{comp.id}.T must remain fixed; graph-native fitting uses one shared device temperature.",
+                "error",
+            ))
         if value <= 0:
             warnings.append(_warn(
                 "graph_nonpositive_temperature",
