@@ -69,7 +69,7 @@ export default defineConfig(({ mode }) => {
   const staticBrowser = mode === "static";
 
   return {
-    root: "frontend",
+    root: join(here, "frontend"),
     base: staticBrowser ? "./" : "/",
     plugins: [react(), staticPythonPayloadPlugin(staticBrowser)],
     define: {
