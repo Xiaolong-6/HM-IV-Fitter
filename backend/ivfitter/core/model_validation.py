@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from math import isfinite
+from math import isclose, isfinite
 
 from .component_registry import registry_by_key, registry_by_function
 from ivfitter.components.custom import validate_expression, validate_expression_symbols
@@ -133,6 +133,15 @@ def _validate_graph_component(comp: GraphComponent) -> list[FitWarning]:
             allowed_variables=_GRAPH_CUSTOM_VARIABLES,
             code_prefix="graph_custom",
         ))
+        if str((comp.metadata or {}).get("templateKey", "")) == "resistance":
+            resistance_symbol = expression.strip()
+            resistance = comp.params.get(resistance_symbol)
+            if resistance is not None and float(resistance.value) <= 0:
+                warnings.append(_warn(
+                    "graph_nonpositive_resistance",
+                    f"{comp.id}: built-in resistance must be greater than 0 ohm for graph solving.",
+                    "error",
+                ))
         return warnings
 
     definition = registry_by_function().get(comp.function_type)
@@ -188,7 +197,7 @@ def _validate_graph_component(comp: GraphComponent) -> list[FitWarning]:
     return warnings
 
 
-def _validate_graph_spec(graph: GraphSpec) -> list[FitWarning]:
+def _validate_graph_spec(graph: GraphSpec, model_temperature_K: float) -> list[FitWarning]:
     warnings: list[FitWarning] = []
     node_ids = [node.id for node in graph.nodes]
     node_set = set(node_ids)
@@ -211,6 +220,47 @@ def _validate_graph_spec(graph: GraphSpec) -> list[FitWarning]:
             warnings.append(_warn(
                 "graph_missing_terminal_node",
                 f"Graph terminal {terminal!r} is not defined.",
+                "error",
+            ))
+
+    graph_temperatures: list[tuple[str, float]] = []
+    for comp in graph.components:
+        temperature = comp.params.get("T")
+        if temperature is None:
+            continue
+        value = float(temperature.value)
+        if value <= 0:
+            warnings.append(_warn(
+                "graph_nonpositive_temperature",
+                f"{comp.id}.T must be greater than 0 K.",
+                "error",
+            ))
+        else:
+            graph_temperatures.append((comp.id, value))
+
+    if graph_temperatures:
+        reference_temperature = graph_temperatures[0][1]
+        inconsistent = [
+            f"{component_id}={value:g} K"
+            for component_id, value in graph_temperatures[1:]
+            if not isclose(value, reference_temperature, rel_tol=1e-12, abs_tol=1e-12)
+        ]
+        if inconsistent:
+            warnings.append(_warn(
+                "graph_inconsistent_temperature",
+                "Graph-native diode/custom components must share one temperature; "
+                f"reference={reference_temperature:g} K, differing: {', '.join(inconsistent)}.",
+                "error",
+            ))
+        if not isclose(
+            reference_temperature,
+            float(model_temperature_K),
+            rel_tol=1e-12,
+            abs_tol=1e-12,
+        ):
+            warnings.append(_warn(
+                "graph_temperature_mismatch",
+                f"Graph component temperature {reference_temperature:g} K does not match model.temperature_K={model_temperature_K:g} K.",
                 "error",
             ))
 
@@ -414,5 +464,5 @@ def validate_model_spec(model: ModelSpec) -> list[FitWarning]:
                     "info",
                 ))
     if model.graph is not None:
-        warnings.extend(_validate_graph_spec(model.graph))
+        warnings.extend(_validate_graph_spec(model.graph, model.temperature_K))
     return warnings
