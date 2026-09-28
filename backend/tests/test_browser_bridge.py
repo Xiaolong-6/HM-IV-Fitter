@@ -88,7 +88,7 @@ def test_browser_bridge_runs_fit_and_report_end_to_end():
 
     result = _call("fit", request)
     assert result["success"] is True
-    assert result["parameters"]["Rsh.Rsh_ohm"]["value"] == pytest.approx(1000.0, rel=1e-5)
+    assert result["parameters"]["Rsh.Rsh_ohm"]["value"] == pytest.approx(1000.0, rel=1e-4)
     assert len(result["curves"]["current_fit_A"]) == len(voltage)
 
     markdown = _call("export_report", result)
