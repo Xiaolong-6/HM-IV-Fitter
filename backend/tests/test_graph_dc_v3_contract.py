@@ -101,6 +101,16 @@ def test_graph_dc_fit_uses_graph_params_not_legacy_ghost_params():
     assert result.model.graph is not None
     assert result.model.graph.components[0].params["Rsh"].value == fitted_r
     assert result.model.parallel[0].params["Rsh_ohm"].value == fitted_r
+    assert result.equations.title.startswith("Graph-native")
+    joined_equations = "\n".join(
+        result.equations.voltage_relation
+        + result.equations.auxiliary
+        + result.equations.topology
+    )
+    assert "nodes=V->GND" in joined_equations
+    assert "expression=Rsh" in joined_equations
+    assert f"Rsh={fitted_r:g}" in joined_equations
+    assert "Generic one-junction composite" not in joined_equations
 
 
 def test_graph_dc_exception_restores_prefit_graph_then_syncs_projection(monkeypatch):
