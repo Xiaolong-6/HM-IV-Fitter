@@ -54,6 +54,7 @@ type PreviewCanvasProps = {
   onGoToFitting?: () => void;
   syntheticTool?: ReactNode;
   formulaSections?: Mb3FormulaSection[];
+  compileErrors?: string[];
   compileWarnings?: string[];
   activeWireIds?: string[];
 };
@@ -95,7 +96,7 @@ function nodeToComponent(node: PreviewCanvasNode, templates: PreviewComponentTem
   };
 }
 
-export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticTool, formulaSections = [], compileWarnings = [], activeWireIds = [] }: PreviewCanvasProps) {
+export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticTool, formulaSections = [], compileErrors = [], compileWarnings = [], activeWireIds = [] }: PreviewCanvasProps) {
   const frameRef = useRef<HTMLIFrameElement | null>(null);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const draggedTemplateRef = useRef<PreviewComponentTemplate | null>(null);
@@ -423,9 +424,13 @@ export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticToo
   };
 
   const effectiveCircuitStatus: CircuitStatus = {
-    connected: circuitStatus.connected && compileWarnings.length === 0,
+    connected: circuitStatus.connected && compileErrors.length === 0,
     activeWireCount: circuitStatus.activeWireCount,
-    warnings: compileWarnings.length ? compileWarnings : circuitStatus.warnings,
+    warnings: compileErrors.length
+      ? compileErrors
+      : compileWarnings.length
+        ? compileWarnings
+        : circuitStatus.warnings,
   };
 
   const previewUrl = new URL(
@@ -468,7 +473,7 @@ export function PreviewCanvas({ onCanvasStateChange, onGoToFitting, syntheticToo
           <PreviewSyntheticPanel position={flyout.position} size={flyout.size} pinned={flyout.pinned} onTogglePinned={toggleFlyoutPinned} syntheticTool={syntheticTool} onStartDrag={startFlyoutDrag} onStartResize={startFlyoutResize} />
         ) : null}
         {flyout?.kind === "examine" ? (
-          <PreviewEquationsPanel position={flyout.position} size={flyout.size} pinned={flyout.pinned} onTogglePinned={toggleFlyoutPinned} sections={formulaSections} warnings={compileWarnings} onStartDrag={startFlyoutDrag} onStartResize={startFlyoutResize} />
+          <PreviewEquationsPanel position={flyout.position} size={flyout.size} pinned={flyout.pinned} onTogglePinned={toggleFlyoutPinned} sections={formulaSections} warnings={[...compileErrors, ...compileWarnings]} onStartDrag={startFlyoutDrag} onStartResize={startFlyoutResize} />
         ) : null}
         <PreviewInspectorPanel
           component={selectedComponent}
