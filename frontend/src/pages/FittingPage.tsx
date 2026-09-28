@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useReducer, useRef } from "react";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { EquationSummary, FitConfig, FitResult, FitSessionStats, FunctionDefinition, ModelSpec, TraceData } from "../model/types";
 import { exportReport, exportReportCsv, fitTrace, getRegistry, equations, validateModel } from "../api/client";
+import { browserRuntimeEnabled, getBrowserRuntimeStatus, resetBrowserRuntime, subscribeBrowserRuntimeStatus } from "../api/browserRuntime";
 import { emptyTrace, estimateResidualFloorA } from "../model/utils";
 import { seedModelFromFittedValues } from "../model/parameterGrouping";
 import { WorkflowTopNav } from "../components/WorkflowTopNav";
@@ -172,6 +173,10 @@ export function FittingPage() {
     );
   };
 
+  const [browserRuntimeStatus, setBrowserRuntimeStatus] = useState(
+    getBrowserRuntimeStatus,
+  );
+
   const abortFitRef = useRef<AbortController | null>(null);
   const fitRunSeqRef = useRef(0);
   const activeFitRunIdRef = useRef<number | null>(null);
@@ -240,10 +245,30 @@ export function FittingPage() {
   } = useWorkflowLayoutState();
   const language = UI_LANGUAGE;
   const startPaneResize = usePaneResize();
+
+  useEffect(
+    () => subscribeBrowserRuntimeStatus(setBrowserRuntimeStatus),
+    [],
+  );
+
+  async function loadRegistry() {
+    try {
+      const nextRegistry = await getRegistry();
+      setRegistry(nextRegistry);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    }
+  }
+
+  function retryBrowserRuntime() {
+    resetBrowserRuntime();
+    setError(null);
+    void loadRegistry();
+  }
+
   useEffect(() => {
-    getRegistry()
-      .then(setRegistry)
-      .catch((e) => setError(String(e)));
+    void loadRegistry();
   }, []);
 
   useFitTimer({
@@ -648,6 +673,24 @@ export function FittingPage() {
       <WorkflowTopNav activeStep={activeView} onSelect={setActiveView} />
 
       <main className={`workspace four-step-workspace workflow-view-${activeView}`}>
+        {browserRuntimeEnabled() && browserRuntimeStatus.state === "loading" ? (
+          <div className="browser-runtime-banner loading" role="status">
+            Preparing local fitting engine…
+          </div>
+        ) : null}
+        {browserRuntimeEnabled() && browserRuntimeStatus.state === "error" ? (
+          <div className="browser-runtime-banner error" role="alert">
+            <span>
+              Local fitting engine failed to start
+              {browserRuntimeStatus.error
+                ? `: ${browserRuntimeStatus.error}`
+                : "."}
+            </span>
+            <button type="button" onClick={retryBrowserRuntime}>
+              Retry
+            </button>
+          </div>
+        ) : null}
         {activeView === "data" ? (
           <DataImportWorkspace
             language={language}
