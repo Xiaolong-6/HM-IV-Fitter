@@ -164,15 +164,27 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
     fullPage: true,
   });
 
+  await workflow.getByRole("button", { name: "3 Fit" }).click();
+  await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  const emptyRunFit = page.getByRole("button", { name: "Run fit" });
+  await expect(emptyRunFit).toBeDisabled();
+  await expect(page.getByText("No runnable model.")).toBeVisible();
+
   await workflow.getByRole("button", { name: "2 Model builder" }).click();
   await expect(page.locator(".mbv3-direct-page")).toBeVisible();
+  await page.getByRole("button", { name: "Model presets" }).click();
+  await page.getByText("Single diode model", { exact: true }).click();
+  const useModel = page.getByRole("button", { name: "Use model for fitting" });
+  await expect(useModel).toBeEnabled();
   await page.screenshot({
     path: "test-results/four-step-model.png",
     fullPage: true,
   });
+  await useModel.click();
 
-  await workflow.getByRole("button", { name: "3 Fit" }).click();
   await expect(page.locator(".fitting-page-one-column")).toBeVisible();
+  const runFit = page.getByRole("button", { name: "Run fit" });
+  await expect(runFit).toBeEnabled();
   await page.screenshot({
     path: "test-results/four-step-fit.png",
     fullPage: true,
@@ -187,9 +199,14 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   });
 
   await workflow.getByRole("button", { name: "3 Fit" }).click();
-  const runFit = page.getByRole("button", { name: "Run fit" });
-  await expect(runFit).toBeEnabled();
   await runFit.click();
+  const stopFit = page.getByRole("button", { name: "Stop fit" });
+  await expect(stopFit).toBeVisible();
+  await stopFit.click();
+  await expect(page.getByRole("button", { name: "Run fit" })).toBeVisible();
+  await expect(page.getByText(/Cancelled ·/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Run fit" }).click();
   await expect(page.getByRole("button", { name: "Run again" })).toBeVisible({
     timeout: 120_000,
   });
