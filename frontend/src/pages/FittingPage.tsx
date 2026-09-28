@@ -16,6 +16,9 @@ import { buildReportBaseName, emptyReportArtifacts, type ReportArtifacts } from 
 import { canGenerateReport, createErrorLifecycle, createRunningLifecycle, createTimeoutLifecycle, elapsedSecondsSince, nextRunId, shouldAcceptRunResult, terminalCancelledState, type FitLifecycleState } from "../model/fitLifecycle";
 import { buildHtmlReportDocument } from "../model/htmlReport";
 import { createInitialModel, initialConfig } from "../model/defaults";
+import { emptyCanvasState, canvasStateToMb3Graph } from "../model-builder/preview/canvasState";
+import { LAYOUT_STORAGE_KEY, readJson } from "../model-builder/preview/previewStorage";
+import { compileMb3Graph } from "../model-builder/domain/compile";
 import { ModelWorkflowPage, FittingWorkflowPage } from "./components/WorkflowSections";
 import { ReportWorkflowPage } from "./components/ReportWorkflowPage";
 import { usePaneResize } from "./hooks/usePaneResize";
@@ -26,6 +29,17 @@ import { FitActionButtons, FitMessages, FitReportButton } from "./components/Fit
 import { APP_VERSION } from "../utils/version";
 
 const UI_LANGUAGE: Language = "en";
+
+function createInitialVisibleModel(appVersion: string): ModelSpec {
+  const baseModel = createInitialModel(appVersion);
+  const canvasState = readJson(LAYOUT_STORAGE_KEY, emptyCanvasState());
+  return compileMb3Graph(canvasStateToMb3Graph(canvasState), baseModel).model;
+}
+
+function modelHasRunnablePath(model: ModelSpec): boolean {
+  if ((model.graph?.components?.length ?? 0) > 0) return true;
+  return model.core.length + model.series.length + model.parallel.length > 0;
+}
 
 type FitStatusState = {
   isFitting: boolean;
@@ -86,7 +100,7 @@ function createInitialFittingPageState(): FittingPageState {
     registry: [],
     traces: [],
     selectedTraceId: null,
-    model: createInitialModel(APP_VERSION),
+    model: createInitialVisibleModel(APP_VERSION),
     config: initialConfig,
     fitDrawerMode: "none",
     result: null,
@@ -288,6 +302,7 @@ export function FittingPage() {
     traces[0] ??
     emptyTrace();
   const hasSelectedTrace = selectedTrace.voltage_V.length > 0;
+  const hasRunnableModel = modelHasRunnablePath(model);
   const autoVoltageRange = useMemo(() => {
     const finite = selectedTrace.voltage_V.filter(Number.isFinite);
     if (!finite.length) return { vMin: null, vMax: null };
@@ -366,6 +381,17 @@ export function FittingPage() {
         },
       });
       setError(t(UI_LANGUAGE, "noTraceError"));
+      return;
+    }
+    if (!modelHasRunnablePath(model)) {
+      activeFitRunIdRef.current = null;
+      setResult(null);
+      setNoTraceRunAttempted(false);
+      const message = "Build a complete V-to-GND model before running a fit.";
+      updateFitStatus({
+        lifecycle: createErrorLifecycle(runId, message),
+      });
+      setError(message);
       return;
     }
     setNoTraceRunAttempted(false);
@@ -642,6 +668,7 @@ export function FittingPage() {
     <>
       <FitActionButtons
         hasSelectedTrace={hasSelectedTrace}
+        hasRunnableModel={hasRunnableModel}
         isFitting={isFitting}
         result={result}
         language={language}
@@ -660,6 +687,7 @@ export function FittingPage() {
   const fitMessagesNode = (
     <FitMessages
       hasTrace={selectedTrace.voltage_V.length > 0}
+      hasRunnableModel={hasRunnableModel}
       error={error}
       isFitting={isFitting}
       fitPromotionNotice={fitPromotionNotice}
