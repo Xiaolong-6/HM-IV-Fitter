@@ -377,6 +377,27 @@ export function FittingPage() {
       );
     }, timeoutS * 1000);
     try {
+      const validationWarnings = await validateModel(modelBeforeFit, controller.signal);
+      if (
+        !shouldAcceptRunResult({
+          activeRunId: activeFitRunIdRef.current,
+          runId,
+          cancelledRunIds: cancelledFitRunIdsRef.current,
+        })
+      )
+        return;
+      const blockingValidation = validationWarnings.filter(
+        (warning) => warning.severity === "error",
+      );
+      if (blockingValidation.length) {
+        const message = `Model validation failed: ${blockingValidation
+          .map((warning) => warning.message)
+          .join(" ")}`;
+        updateFitStatus({ lifecycle: createErrorLifecycle(runId, message) });
+        setError(message);
+        return;
+      }
+
       const fit = await fitTrace(
         selectedTrace,
         modelBeforeFit,
