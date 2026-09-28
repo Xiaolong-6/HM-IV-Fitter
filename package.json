@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
-    "build:static": "npm --prefix frontend run build:static",
+    "build:static": "tsc -p frontend/tsconfig.json && vite build --mode static --config vite.config.ts",
     "test": "npm run test:frontend",
     "test:frontend": "npm --prefix frontend run test --",
     "preview": "npm --prefix frontend run preview",
