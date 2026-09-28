@@ -5,6 +5,7 @@ import { exportReport, exportReportCsv, fitTrace, getRegistry, equations, valida
 import { browserRuntimeEnabled, getBrowserRuntimeStatus, resetBrowserRuntime, subscribeBrowserRuntimeStatus } from "../api/browserRuntime";
 import { emptyTrace, estimateResidualFloorA } from "../model/utils";
 import { seedModelFromFittedValues } from "../model/parameterGrouping";
+import { syncStoredCanvasParametersFromModel } from "../model-builder/preview/fittedCanvasPromotion";
 import { WorkflowTopNav } from "../components/WorkflowTopNav";
 import { FitStatusBar } from "../components/FitStatusBar";
 import { FitConfigPanel, type FitDrawerMode } from "../components/FitConfigPanel";
@@ -487,7 +488,9 @@ export function FittingPage() {
           Math.max(0, Math.round(diag?.root_solver_failures ?? 0)),
       }));
         if (fitResultIsSafeToPromote(fit)) {
-        setModel(seedModelFromFittedValues(modelBeforeFit, fit));
+        const promotedModel = seedModelFromFittedValues(modelBeforeFit, fit);
+        syncStoredCanvasParametersFromModel(promotedModel);
+        setModel(promotedModel);
         setFitPromotionNotice(null);
       } else {
         setFitPromotionNotice(
