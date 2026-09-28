@@ -1,6 +1,9 @@
 name: Static browser prototype
 
 on:
+  push:
+    branches:
+      - "feat/static-browser-standalone"
   pull_request:
     paths:
       - "backend/**"
