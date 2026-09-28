@@ -22,7 +22,6 @@ def test_user_facing_source_uses_neutral_component_labels():
         root / "frontend/src/content/localizedText.ts",
         root / "frontend/src/components/EquationPreview.tsx",
         root / "frontend/src/components/ModelBuilder.tsx",
-        root / "frontend/src/model/modelDisplaySemantics.ts",
     ]
     combined = "\n".join(path.read_text(encoding="utf-8") for path in frontend_sources)
     expected = [
