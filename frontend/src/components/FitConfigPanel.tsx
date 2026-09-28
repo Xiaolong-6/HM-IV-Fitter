@@ -5,8 +5,6 @@ import type { Language } from "../model/i18n";
 import { t } from "../model/i18n";
 import { HelpTip } from "./HelpTip";
 
-export type FitDrawerMode = "none" | "advanced" | "details";
-
 function isPartialNumber(text: string) {
   return (
     text === "" ||
