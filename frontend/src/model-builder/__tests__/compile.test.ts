@@ -32,6 +32,8 @@ describe("model-builder compile contract", () => {
     expect(compiled.model.core[0].params.I0_A.value).toBe(1e-12);
     expect(compiled.model.series[0].params.Rs_ohm.value).toBe(10);
     expect(compiled.model.parallel[0].params.Rsh_ohm.value).toBe(1e9);
+    expect(compiled.model.series[0].polarity).toBeUndefined();
+    expect(compiled.model.parallel[0].polarity).toBeUndefined();
     expect(compiled.formulaLatex.join("\n")).toContain("V_{ext}");
     expect(compiled.formulaLatex.join("\n")).toContain("I_{D1}");
     expect(compiled.formulaLatex.join("\n")).toContain("I_{Rsh}");
