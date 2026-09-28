@@ -29,6 +29,7 @@ import {
   buildParameterRows,
   componentDisplayTag,
   componentLawFormPlacement,
+  fittedParameterForModelParameter,
   groupParameterRows,
   parameterKey,
   placementGroupTitle,
@@ -330,7 +331,12 @@ export function ParameterTable({
                           </tr>
                           {group.rows.map(({ location, component: comp, paramName, spec }) => {
                             const key = parameterKey(comp.id, paramName);
-                            const fitted = result?.parameters[key];
+                            const fitted = fittedParameterForModelParameter(
+                              model,
+                              result,
+                              comp.id,
+                              paramName,
+                            );
                             const meaning = result
                               ? parameterMeaning(result, key, language)
                               : parameterMeaningFromSpec(comp, paramName, spec, language);
