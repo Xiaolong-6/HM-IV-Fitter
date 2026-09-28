@@ -57,7 +57,7 @@ const REPORT_TEXT = {
   voltageRelation: "Component voltage",
   currentSum: "Current residual",
   backendEquations: "Show technical equation details",
-  exports: "Next",
+  exports: "Export report",
   downloadHtml: "Download HTML report",
   downloadCsv: "Download report CSV",
   downloadDiagnosticHtml: "Download diagnostic HTML",
