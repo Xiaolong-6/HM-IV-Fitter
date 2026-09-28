@@ -108,7 +108,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hm-iv-fitter-ui-review-${{ github.sha }}
-          path: frontend/test-results/four-step-import.png
+          path: frontend/test-results/four-step-*.png
           if-no-files-found: warn
           retention-days: 7
 
