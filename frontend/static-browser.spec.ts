@@ -203,8 +203,8 @@ test("static UI uses four-step workflow and imports bundled HappyMeasure sample"
   const importSummary = page.getByRole("region", { name: "Import summary" });
   await expect(importSummary.getByText(/14 traces · 1330 points/)).toBeVisible();
 
-  const importRail = page.locator(".data-import-layout > .import-loaded-bar");
-  const importMain = page.locator(".data-import-layout > .trace-control-card");
+  const importRail = page.locator(".data-import-sidebar > .import-loaded-bar");
+  const importMain = page.locator(".data-review-column > .trace-control-card");
   await expect(importRail).toBeVisible();
   await expect(importMain).toBeVisible();
   const importRailBox = await importRail.boundingBox();
