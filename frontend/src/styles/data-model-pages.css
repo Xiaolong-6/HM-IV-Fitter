@@ -2219,3 +2219,194 @@ button.primary { background: var(--theme-accent); border-color: var(--theme-acce
     position: static;
   }
 }
+
+
+/* Two-column Import page: source controls left, all review content right. */
+.web-page-flow.data-workspace.scroll-page {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  padding: calc(8px * var(--app-zoom)) calc(10px * var(--app-zoom))
+    calc(12px * var(--app-zoom));
+}
+
+.webpage-data-layout.data-import-layout,
+.webpage-data-layout.data-import-layout.no-data,
+.webpage-data-layout.data-import-layout.has-data {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: none;
+  gap: calc(12px * var(--app-zoom));
+  align-items: stretch;
+}
+
+.data-import-sidebar,
+.data-review-column {
+  min-width: 0;
+  min-height: 0;
+}
+
+.data-import-sidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.data-import-sidebar > .webpage-panel,
+.data-import-sidebar > .card {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+}
+
+.data-import-sidebar .import-actions-card {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+.data-import-sidebar .data-source-tabs {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.data-import-sidebar .drop-import-zone {
+  min-height: 128px;
+}
+
+.data-import-sidebar .inline-paste-panel textarea {
+  min-height: 180px;
+}
+
+.data-import-sidebar .import-loaded-bar {
+  display: grid;
+  align-content: start;
+  justify-content: stretch;
+  gap: calc(10px * var(--app-zoom));
+  padding: calc(12px * var(--app-zoom));
+}
+
+.data-import-sidebar .import-loaded-summary {
+  display: grid;
+  justify-items: start;
+  gap: calc(7px * var(--app-zoom));
+}
+
+.data-import-sidebar .import-loaded-summary strong,
+.data-import-sidebar .import-loaded-summary .muted {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: anywhere;
+}
+
+.data-import-sidebar .import-loaded-actions {
+  justify-content: stretch;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.data-import-sidebar .import-loaded-actions button {
+  width: 100%;
+}
+
+.data-review-column {
+  display: grid;
+  grid-template-rows: auto minmax(280px, 0.46fr) minmax(260px, 0.54fr);
+  gap: calc(10px * var(--app-zoom));
+  overflow: hidden;
+}
+
+.data-review-column > .webpage-panel,
+.data-review-column > .card {
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  margin: 0;
+}
+
+.data-review-column .trace-control-row {
+  grid-template-columns:
+    minmax(180px, 1.2fr)
+    minmax(180px, 1fr)
+    minmax(150px, auto)
+    auto
+    auto;
+}
+
+.data-review-column .plot-review-card,
+.data-review-column .spreadsheet-card {
+  overflow: hidden;
+  display: grid;
+  min-height: 0;
+}
+
+.data-review-column .plot-review-card {
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.data-review-column .plot-review-card .trace-plot-review-grid {
+  min-height: 0;
+  height: 100%;
+}
+
+.data-review-column .plot-review-card .simple-chart,
+.data-review-column .plot-review-card .simple-chart > svg {
+  min-height: 0;
+  max-height: 100%;
+}
+
+.data-review-column .spreadsheet-card {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.data-review-column .spreadsheet-card .spreadsheet-wrap,
+.data-review-column .spreadsheet-wrap {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: auto;
+}
+
+.data-review-empty-panel {
+  grid-row: 1 / -1;
+  display: grid;
+  align-content: center;
+  min-height: 0;
+}
+
+.data-review-empty-panel .empty-data-invite {
+  min-height: 260px;
+}
+
+@media (max-width: 980px) {
+  .web-page-flow.data-workspace.scroll-page {
+    height: auto;
+    overflow-y: auto;
+  }
+
+  .webpage-data-layout.data-import-layout,
+  .webpage-data-layout.data-import-layout.no-data,
+  .webpage-data-layout.data-import-layout.has-data {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+  }
+
+  .data-import-sidebar,
+  .data-review-column {
+    overflow: visible;
+  }
+
+  .data-review-column {
+    grid-template-rows: auto auto auto;
+  }
+
+  .data-review-column .trace-control-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
