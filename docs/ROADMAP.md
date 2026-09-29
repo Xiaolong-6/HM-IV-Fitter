@@ -12,7 +12,6 @@ Completed platform milestones:
 - stale-result/report invalidation;
 - browser-runtime abort/retry handling;
 - GitHub Pages deployment from validated `main`;
-- retirement of the desktop/PyInstaller portable wrapper and associated active documentation.
 
 ## Next priorities
 
@@ -41,6 +40,5 @@ Each case should retain input trace, model, starting parameters, bounds, expecte
 ## Product guardrails
 
 - Keep the workflow focused on importing IV data, defining an interpretable model, fitting, inspecting residuals/diagnostics, and exporting a defensible result.
-- Do not reintroduce retired desktop UI/packaging paths as hidden compatibility work.
 - Saved-model compatibility readers may remain when required by real files/tests.
 - Do not equate **Backend reportable** with independent scientific validation.
