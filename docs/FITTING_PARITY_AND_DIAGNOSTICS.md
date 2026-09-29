@@ -10,6 +10,12 @@ CPython/SciPy core <-> Pyodide/SciPy browser runtime
 
 FastAPI uses the CPython core and remains a development/oracle adapter. Browser parity must use the same serialized `FitRequest` contract rather than reimplementing a second model in TypeScript.
 
+## Numerical conditioning
+
+For `linear` weighting, the optimizer divides the full residual vector by one fixed RMS scale derived from the selected measured-current data. This keeps the objective minimizer unchanged while preventing nA/uA datasets from satisfying SciPy's gradient tolerance before a meaningful parameter step.
+
+User-facing curves, `linear_rmse_A`, exported residuals, and final weighted chi-square continue to use the original ampere-valued residuals. `symmetric_log_signed` residuals are already dimensionless and are not rescaled.
+
 ## Current CI gate
 
 Static-browser CI now generates the CPython reference at test time and runs the same requests in real Chromium/Pyodide.
