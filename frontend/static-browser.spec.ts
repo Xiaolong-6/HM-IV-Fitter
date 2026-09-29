@@ -183,6 +183,18 @@ test("Pyodide fits match the CPython canonical and publication-data oracle", asy
         parameters: Record<string, number>;
         metrics: Record<string, number>;
         current_fit_A: number[];
+        warnings: Array<{ code: string; severity: string }>;
+        diagnostics: {
+          solver_mode: string;
+          residual_weighting: string;
+          loss_function: string;
+          free_parameter_count: number;
+          fixed_parameter_count: number;
+          points_total: number;
+          points_in_selected_range: number;
+          points_used: number;
+          points_excluded: number;
+        };
       };
       tolerance: {
         relative: number;
@@ -226,6 +238,18 @@ test("Pyodide fits match the CPython canonical and publication-data oracle", asy
         parameters: Record<string, { value: number }>;
         metrics: Record<string, number>;
         curves: { current_fit_A: number[] };
+        warnings: Array<{ code: string; severity: string }>;
+        fit_diagnostics: {
+          solver_mode: string;
+          residual_weighting: string;
+          loss_function: string;
+          free_parameter_count: number;
+          fixed_parameter_count: number;
+          points_total: number;
+          points_in_selected_range: number;
+          points_used: number;
+          points_excluded: number;
+        };
       }>("fit", item.request);
 
       results.push({
@@ -240,6 +264,24 @@ test("Pyodide fits match the CPython canonical and publication-data oracle", asy
           ),
           metrics: fit.metrics,
           current_fit_A: fit.curves.current_fit_A,
+          warnings: [...fit.warnings]
+            .map(({ code, severity }) => ({ code, severity }))
+            .sort((a, b) =>
+              a.code === b.code
+                ? a.severity.localeCompare(b.severity)
+                : a.code.localeCompare(b.code),
+            ),
+          diagnostics: {
+            solver_mode: fit.fit_diagnostics.solver_mode,
+            residual_weighting: fit.fit_diagnostics.residual_weighting,
+            loss_function: fit.fit_diagnostics.loss_function,
+            free_parameter_count: fit.fit_diagnostics.free_parameter_count,
+            fixed_parameter_count: fit.fit_diagnostics.fixed_parameter_count,
+            points_total: fit.fit_diagnostics.points_total,
+            points_in_selected_range: fit.fit_diagnostics.points_in_selected_range,
+            points_used: fit.fit_diagnostics.points_used,
+            points_excluded: fit.fit_diagnostics.points_excluded,
+          },
         },
       });
     }
@@ -252,6 +294,12 @@ test("Pyodide fits match the CPython canonical and publication-data oracle", asy
   for (const comparison of comparisons) {
     expect(comparison.browser.success, comparison.id).toBe(comparison.reference.success);
     expect(comparison.browser.reportable, comparison.id).toBe(comparison.reference.reportable);
+    expect(comparison.browser.warnings, `${comparison.id} warnings`).toEqual(
+      comparison.reference.warnings,
+    );
+    expect(comparison.browser.diagnostics, `${comparison.id} diagnostics`).toEqual(
+      comparison.reference.diagnostics,
+    );
 
     for (const [key, referenceValue] of Object.entries(comparison.reference.parameters)) {
       const browserValue = comparison.browser.parameters[key];
