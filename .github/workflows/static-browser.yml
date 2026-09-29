@@ -86,6 +86,13 @@ jobs:
           print(f"Static Python payload: {len(files)} Python files")
           PY
 
+      - name: Build CPython parity oracle
+        env:
+          PYTHONPATH: backend
+        run: |
+          python tools/build_browser_parity_oracle.py --output frontend/dist/parity-oracle.json
+          test -f frontend/dist/parity-oracle.json
+
       - name: Install Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
