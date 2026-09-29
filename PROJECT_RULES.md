@@ -228,15 +228,11 @@ Every user input, selector, checkbox, and action button that changes fitting, da
 
 The main workflow should remain visually clean. Prefer compact `?` help and titles over long explanatory paragraphs.
 
-## 12. I18n and user text
+## 12. User text
 
-Visible workflow labels should be routed through the English/Chinese i18n dictionary when practical.
+The production UI is English-only. Do not reintroduce a language selector, Chinese UI strings, app-level zoom controls, a Start/Welcome page, a Help navigation page, or a top-bar version label unless the product direction is explicitly changed.
 
-A release is not handoff-ready if switching language leaves major workflow panels half translated. Technical identifiers may remain untranslated only when they are intentional internal IDs, formulas, units, or solver names.
-
-The language selector belongs in the left dock footer near the version label.
-
-Translation and visible user text should be treated as content, not as ordinary implementation logic. When adding or editing substantial UI/user-manual text, prefer a structure that lets the text be reviewed or translated without requiring the translator to understand React, TypeScript, fitting math, or serialization details. Follow `docs/LOCALIZATION_AND_TEXT.md`.
+Visible user text should remain concise and separable from fitting/business logic where practical. Technical identifiers may remain visible when they are required for formulas, reproducibility, serialization compatibility, or diagnostics.
 
 ## 12a. Repeatable-feature abstraction principle
 
@@ -244,7 +240,7 @@ When adding a feature, first ask whether this is likely to become a family of si
 
 Examples:
 
-- Language strings and user-manual prose should be separable enough that a general AI assistant or translator can update text without modifying business logic.
+- User-manual/help prose should be separable enough to update without modifying business logic.
 - Parameter-table grouping, filters, and batch actions should live in reusable grouping/action helpers rather than only inside JSX rendering.
 - Model functions should continue to enter through the Law / Form / Placement registry pattern rather than one-off UI branches.
 
@@ -252,7 +248,7 @@ Do not over-abstract speculative ideas into large frameworks. The expected shape
 
 ## 13. Layout and scrolling
 
-Desktop workspace panes must have explicit scroll ownership. A visible scrollbar must correspond to a constrained, scrollable container.
+Wide-screen workspace panes must have explicit scroll ownership. A visible scrollbar must correspond to a constrained, scrollable container.
 
 When adding large cards to the app, verify that the left control column, right plot/results column, and documentation pages remain reachable without relying on accidental browser-body scrolling.
 
@@ -260,9 +256,9 @@ When adding large cards to the app, verify that the left control column, right p
 
 Do not add new libraries, frameworks, services, build systems, plotting packages, math-rendering packages, external APIs, or runtime dependencies unless the prompter explicitly approves after seeing the rationale.
 
-The expected stack is the existing React/Vite frontend, FastAPI backend, Python fitting core, NumPy/SciPy/Pandas where already used, and the existing test/build scripts.
+The expected product stack is React/Vite plus the browser-local Pyodide/Python fitting core. FastAPI remains an approved development/oracle adapter. NumPy/SciPy/Pandas and the existing test/build scripts remain approved.
 
-Root-level numbered `.bat` scripts are the preferred Windows human workflow:
+Root-level numbered `.bat` scripts are Windows developer helpers:
 
 ```text
 00_validate_scripts.bat
@@ -293,7 +289,7 @@ Frontend handoff checks when Node/npm is available:
 
 ```bash
 npm install
-npm run build
+npm run build:static
 ```
 
 A Vite ready message is not proof that the React app renders. Manual UI checks must be listed separately. After any completed change, include a 3-step browser test that states where to click, what to observe, and what confirms the change worked.

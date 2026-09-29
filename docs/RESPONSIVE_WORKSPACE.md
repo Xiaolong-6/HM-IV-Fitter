@@ -1,36 +1,37 @@
 # Responsive workspace
 
-The Web UI uses a viewport-oriented layout for desktop and a continuous one-column workflow on phone portrait screens.
+The production web UI uses the same four-step workflow at desktop and narrow/mobile widths:
 
-## Goals
+1. Import data
+2. Model builder
+3. Fit
+4. Report
 
-- Fit the main workflow into one screen on common landscape laptop/desktop displays.
-- Keep control, plot, and result areas visible at the same time where screen space allows.
-- Use internal panel scrolling on desktop rather than one long page scroll.
-- On screens <= 640 px, remove desktop-style vertical gaps and let sections flow continuously in one column.
-- Keep the mobile **Run fit** action full-width and sticky above the bottom tab navigation.
-- Support app-local zoom through toolbar buttons and Ctrl + mouse wheel.
+## Desktop
 
-## Human controls
+Import and Fit use a two-column structure:
 
-In the top toolbar:
+- a narrow left control/setup rail;
+- a wider review/analysis workspace.
 
-```text
-−  100%  +
-```
+The layout should keep scientific content dense without creating nested full-page scroll regions.
 
-also supports:
+## Narrow/mobile
 
-```text
-Ctrl + mouse wheel
-```
+At narrow widths:
 
-The app-local zoom changes UI density without requiring browser-level zoom. Current high-resolution support allows zoom above the older 118% ceiling.
+- the four navigation actions must remain inside the viewport;
+- columns stack naturally;
+- controls remain touchable;
+- no horizontal page overflow is allowed;
+- the normal browser zoom is used rather than an app-specific zoom control.
 
-## Mobile interaction rules
+A 420 px Playwright viewport is part of the static-browser smoke coverage.
 
-- Section headers need large tap targets, visible chevrons, and short status summaries.
-- Voltage range controls must stay compact; V min and V max should not consume excessive vertical space. When blank, their placeholders should show the selected trace's concrete min/max voltage range so `auto` behavior is not ambiguous.
-- Fit setup status should stay layered and compact: status badges, action row, then a small contextual message/Diagnostics disclosure.
-- Backend connection failures should appear as user-facing banners with Retry/Help actions, not raw `TypeError: Failed to fetch` text.
-- Avoid decorative effects that slow fitting, hide warnings, or make the workflow less clear.
+## Interaction rules
+
+- Run/Stop state must stay obvious.
+- V min/V max and Advanced controls belong in the Fit setup rail.
+- Advanced is inline, not a floating dialog.
+- Backend/browser-runtime failures must be rendered as user-facing status, not raw transport errors.
+- UI density changes must not hide warnings, residuals, or report state.

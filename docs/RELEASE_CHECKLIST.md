@@ -1,67 +1,50 @@
 # Release checklist
 
-## Before packaging
+## Main release gate
 
-- [ ] README version matches package/backend/frontend versions.
-- [ ] `docs/DOCUMENTATION_INDEX.md` points to current docs.
-- [ ] `docs/WEBUI_AGENT_HANDOFF.md` reflects current state.
-- [ ] `docs/TESTED_CURRENT.md` contains the current validation record.
-- [ ] Old generated folders are removed: `node_modules`, `dist`, `frontend/dist`, `__pycache__`, `.pytest_cache`, `*.pyc`.
+The supported product is the static browser build from `main`.
 
-## Validation commands
+Before release/deployment:
 
-```powershell
-npm install
-npm run build
-npm run test:frontend -- --reporter=dot
+- [ ] version metadata is consistent across root/frontend/backend;
+- [ ] `docs/TESTED_CURRENT.md` reflects the current validation state;
+- [ ] Python regression and browser bridge tests pass;
+- [ ] frontend regression tests pass;
+- [ ] `npm run build:static` passes;
+- [ ] static artifact audit passes;
+- [ ] real Chromium/Pyodide smoke passes;
+- [ ] the tested `main` commit is the commit being deployed.
+
+GitHub Pages deployment must follow a successful **Static browser CI** run on `main`.
+
+## Local validation
+
+```bash
 PYTHONPATH=backend python -m pytest backend/tests -q
 python -m compileall -q backend/ivfitter backend/tests
+npm --prefix frontend run test -- --reporter=dot
+npm run build:static
 ```
 
-One-command Windows release build:
+On Windows, `05_release_build.bat` performs the equivalent release-oriented checks and can package the static site.
 
-```powershell
-.\05_release_build.bat
-```
+## Browser acceptance
 
-Windows portable app build:
+- [ ] Import generic CSV data.
+- [ ] Import the bundled HappyMeasure multi-trace sample.
+- [ ] Build/select a Model Builder graph.
+- [ ] Run a successful fit.
+- [ ] Verify invalid-model and failed-fit behavior.
+- [ ] Cancel a fit and rerun.
+- [ ] Confirm trace/model changes invalidate stale reports.
+- [ ] Download HTML and CSV reports.
+- [ ] Check narrow/mobile navigation.
+- [ ] Verify runtime-bootstrap failure is visible and retryable.
 
-```powershell
-.\06_build_windows_portable.bat
-```
+## Scientific release gate
 
-Output: `release/portable-dist/IV-fitter-v<version>-win-portable.zip`.
+Operational browser success does not establish scientific validity for every model.
 
-## Manual browser checks
+Before treating a fitting family as scientifically validated, add representative real-data regression cases with expected parameter/metric tolerances and CPython/Pyodide parity checks.
 
-- [ ] Import a CSV or pasted trace.
-- [ ] Build a simple model and run a fit.
-- [ ] Confirm warnings/result panels update.
-- [ ] Open User manual -> Function Guide.
-- [ ] Test mobile portrait layout at <= 640 px.
-- [ ] If relevant, test LAN launch with `04c_run_lan_dev.bat`.
-
-## Release-candidate gates
-
-These are the current gates before calling a build a release candidate rather than an internal alpha:
-
-- [ ] Representative desktop/Tkinter parity check is complete on real IV datasets.
-- [ ] At least 2-5 benchmark traces are committed under `examples/` or documented test fixtures, with expected-fit tolerances or expected warnings.
-- [ ] JSON import/export schema compatibility is checked against a saved result from the current package.
-- [ ] Packaging path is chosen and documented: browser-local scripts, desktop wrapper, or another local launcher.
-- [ ] Known alpha-only limitations are explicit in README and handoff docs, especially graph solver status and missing light/dark two-trace preview.
-- [ ] Windows desktop, mobile portrait, and LAN phone/tablet browser checks have current validation notes.
-
-Can remain non-blocking for alpha if documented:
-
-- [ ] One-click light-response presets.
-- [ ] Optional light/dark `Delta I(V)` preview.
-- [ ] Fully structured backend equation schema replacing string summaries.
-
-## Handoff requirements
-
-- [ ] Provide a 3-step browser test in the final response.
-- [ ] State exactly what was changed.
-- [ ] State what was not changed.
-- [ ] State validation commands and results.
-- [ ] Provide the final zip only unless the user asks for intermediate packages.
+The old desktop/Tkinter parity and Windows portable executable are no longer release criteria.

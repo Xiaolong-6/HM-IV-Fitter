@@ -1,54 +1,46 @@
 # Roadmap
 
-## Current product direction
+## Current state
 
-HM-IV-Fitter is moving to a static-browser-first product.
+The static-browser product architecture is now the mainline.
 
-Primary workflow:
+Completed platform milestones:
 
-1. Import data
-2. Model builder
-3. Fit
-4. Report
+- four-step Import data -> Model builder -> Fit -> Report workflow;
+- browser-local Pyodide/SciPy fitting;
+- real Chromium static smoke coverage;
+- stale-result/report invalidation;
+- browser-runtime abort/retry handling;
+- GitHub Pages deployment from validated `main`;
+- retirement of the desktop/PyInstaller portable wrapper and associated active documentation.
 
-The browser build runs the Python/SciPy fitting core locally through Pyodide/Web Worker. The FastAPI path is retained as a development and numerical-oracle path while browser parity is being formalized.
+## Next priorities
 
-## Immediate priorities
+1. Build a representative real-data regression corpus.
+2. Formalize CPython/FastAPI vs Pyodide numerical parity with explicit tolerances.
+3. Improve data-driven initial-value and bounds recommendations.
+4. Continue graph-native solver validation on supported topologies.
+5. Expand reportability diagnostics around identifiability, near-bound parameters, and poor model structure.
 
-1. Merge the validated static-browser implementation to `main`.
-2. Make GitHub Pages build directly from `main`.
-3. Remove obsolete desktop-era application code, packaging scripts, and documentation that no longer describe a supported product path.
-4. Build a real-data regression corpus with expected parameter/metric tolerances.
-5. Formalize CPython/FastAPI vs Pyodide numerical parity as a release gate.
-6. Improve data-driven initial-value and bounds recommendations while preserving user-edited values.
+## Regression corpus
 
-## Scientific validation priorities
+Representative cases should cover:
 
-Representative regression cases should cover:
-
-- ohmic / shunt resistance;
+- ohmic/shunt resistance;
 - diode;
 - diode + series resistance;
 - diode + shunt resistance;
 - diode + series + shunt;
-- soft breakdown;
-- power-law/current branches;
+- soft breakdown/current branches;
 - graph-native custom laws;
 - HappyMeasure real IV traces;
-- deliberately poor or non-identifiable fits.
+- deliberately poor/non-identifiable fits.
 
-For each case, retain the input trace, model, starting parameters, bounds, expected parameter tolerance, diagnostics, warnings, reportability state, and browser/CPython parity result.
+Each case should retain input trace, model, starting parameters, bounds, expected parameter/metric tolerance, warnings, reportability state, and CPython/Pyodide comparison.
 
 ## Product guardrails
 
-Do not add UI features that obscure the core scientific workflow: import IV data, define an interpretable model, fit, inspect residuals/diagnostics, and export a defensible result.
-
-Do not reintroduce hidden legacy placement assumptions into Model Builder. The stored graph is the authoritative topology.
-
-Do not call a fit scientifically validated solely because the backend marks it reportable. Reportability is an internal numerical/product gate; scientific interpretation remains explicit.
-
-## Compatibility lifecycle
-
-- `/api/v2/...` remains the canonical development/server API.
-- Bare `/api/...` aliases are legacy compatibility surfaces and should be removed only after confirming no retained tests/tools require them.
-- Saved-model compatibility should be evaluated separately from removal of obsolete desktop UI code. A compatibility reader may remain even when the old UI is deleted.
+- Keep the workflow focused on importing IV data, defining an interpretable model, fitting, inspecting residuals/diagnostics, and exporting a defensible result.
+- Do not reintroduce retired desktop UI/packaging paths as hidden compatibility work.
+- Saved-model compatibility readers may remain when required by real files/tests.
+- Do not equate **Backend reportable** with independent scientific validation.

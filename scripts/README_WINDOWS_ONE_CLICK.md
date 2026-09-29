@@ -1,46 +1,34 @@
-# Windows one-click scripts
+# Windows developer helper scripts
 
-Use the numbered `.bat` files in the repository root. They are the only human-facing Windows entry points.
+The numbered Windows scripts are developer conveniences. They are not the end-user product path.
+
+The supported product is the static browser application deployed from tested `main`.
+
+## Local development
 
 Recommended order:
 
-1. `00_validate_scripts.bat`
-   - Checks PowerShell helper-script syntax.
-   - Does not install anything.
-
-2. `01_check_environment.bat`
-   - Checks Python 3.12 and pip.
-   - Does not modify the project.
-
-Optional: `01a_install_node_lts.bat`
-   - Use only if setup reports that npm was not found.
-   - Installs Node.js LTS through winget after confirmation.
-
-3. `02_setup_dev.bat`
-   - Creates or reuses root `.venv`.
-   - Installs backend dependencies.
-   - Installs frontend dependencies if Node/npm is available.
-
-4. `03_test_backend.bat`
-   - Runs backend tests through the root `.venv`.
-
-5. `04_run_dev.bat`
-   - Opens backend and frontend in separate windows.
-
-Release build:
-
-- `05_release_build.bat`
-  - Checks version consistency.
-  - Runs frontend build, frontend UI smoke tests, backend tests, and Python compile checks.
-  - Creates `release/iv-fitter-webui-v<version>.zip`.
-- `06_build_windows_portable.bat`
-  - Builds a Windows portable folder with `IV-fitter.exe`.
-  - Packages it as `release/portable-dist/IV-fitter-v<version>-win-portable.zip`.
-  - The portable app does not require users to install Python, Node.js, npm, or project dependencies.
+1. `00_validate_scripts.bat` — checks helper-script syntax.
+2. `01_check_environment.bat` — checks Python/pip.
+3. `01a_install_node_lts.bat` — optional Node.js installation helper.
+4. `02_setup_dev.bat` — creates/reuses `.venv` and installs development dependencies.
+5. `03_test_backend.bat` — runs backend tests.
+6. `04_run_dev.bat` — starts FastAPI + Vite for development.
 
 Optional split launchers:
 
 - `04a_run_backend_only.bat`
 - `04b_run_frontend_only.bat`
+- `04c_run_lan_dev.bat` for LAN browser testing
 
-There are no unnumbered `.bat` alias wrappers in the clean workflow. This keeps the project root smaller and makes debugging clearer.
+## Static release build
+
+`05_release_build.bat` validates and packages the static browser build.
+
+It runs the frontend/static build, frontend regression tests, backend tests/compile checks, validates the Pyodide payload, and creates:
+
+```text
+release/hm-iv-fitter-static-v<version>.zip
+```
+
+The old Windows/PyInstaller portable executable path has been removed.

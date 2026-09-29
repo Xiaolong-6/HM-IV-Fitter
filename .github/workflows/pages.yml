@@ -1,19 +1,14 @@
-name: Deploy HM-IV-Fitter prototype to GitHub Pages
+name: Deploy HM-IV-Fitter to GitHub Pages
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/pages.yml"
-  workflow_dispatch:
   workflow_run:
     workflows:
-      - "Static browser prototype"
+      - "Static browser CI"
     branches:
-      - "feat/static-browser-standalone"
+      - main
     types:
       - completed
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -26,13 +21,13 @@ concurrency:
 
 jobs:
   build:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout validated prototype branch
+      - name: Checkout main
         uses: actions/checkout@v6
         with:
-          ref: feat/static-browser-standalone
+          ref: main
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -63,7 +58,7 @@ jobs:
           path: frontend/dist
 
   deploy:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
