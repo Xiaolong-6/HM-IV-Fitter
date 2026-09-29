@@ -2279,3 +2279,40 @@
     overflow: visible;
   }
 }
+
+
+/* Compact Report export toolbar. */
+.report-export-section {
+  padding: calc(10px * var(--app-zoom)) calc(12px * var(--app-zoom));
+}
+.report-export-section .report-section-heading {
+  align-items: center;
+}
+.report-export-summary {
+  display: flex;
+  align-items: baseline;
+  gap: calc(10px * var(--app-zoom));
+  min-width: 0;
+}
+.report-export-summary h2 {
+  margin: 0;
+  white-space: nowrap;
+}
+.report-export-summary .muted {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.report-export-section .report-export-actions-grid {
+  align-items: center;
+}
+@media (max-width: 720px) {
+  .report-export-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: calc(4px * var(--app-zoom));
+  }
+  .report-export-summary .muted {
+    white-space: normal;
+  }
+}
