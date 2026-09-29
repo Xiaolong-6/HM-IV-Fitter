@@ -359,7 +359,7 @@ const resistanceSuggestion: BoundsSuggestionResponse = {
     "R1.Rs_ohm": {
       component_id: "R1",
       param_name: "Rs_ohm",
-      lower: 1,
+      lower: 0,
       upper: 1e6,
       initial: 100,
       source: "data_suggested",
@@ -379,13 +379,35 @@ describe("Model Builder default recommendation policy", () => {
     expect(report.initials.applied).toBe(1);
     expect(model.series[0].params.Rs_ohm).toMatchObject({
       value: 100,
-      lower: 1,
+      lower: 1e-12,
       upper: 1e6,
     });
     expect(model.graph?.components[0].params.R).toMatchObject({
       value: 100,
-      lower: 1,
+      lower: 1e-12,
       upper: 1e6,
+    });
+  });
+
+  it("does not apply bounds that would exclude a protected user initial", () => {
+    const edited = markParameterUserEdited(
+      graphBackedResistanceModel(2e8, 1e-12, 1e9),
+      "R1",
+      "Rs_ohm",
+      "initial",
+    );
+    const { model, report } = applyDataFitSuggestions(
+      edited,
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(0);
+    expect(report.bounds.skipped).toBe(1);
+    expect(report.initials.applied).toBe(0);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 2e8,
+      lower: 1e-12,
+      upper: 1e9,
     });
   });
 
