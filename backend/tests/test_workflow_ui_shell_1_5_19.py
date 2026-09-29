@@ -8,37 +8,41 @@ def read_repo_file(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_workflow_navigation_pages_replace_workspace_tab():
-    sidebar = read_repo_file("frontend/src/components/WorkflowSidebar.tsx")
-    assert 'export type AppView = "start" | "data" | "model" | "fitting" | "report" | "help"' in sidebar
-    assert '["start", "data", "model", "fitting", "report", "help"]' in sidebar
-    assert '"workspace"' not in sidebar
-    assert '"usage"' not in sidebar
+def test_workflow_navigation_is_four_step_top_shell():
+    nav = read_repo_file("frontend/src/components/WorkflowTopNav.tsx")
+    shell = read_repo_file("frontend/src/pages/FittingPage.tsx")
+
+    assert 'export type WorkflowStep = "data" | "model" | "fitting" | "report"' in nav
+    for label in ["Import data", "Model builder", "Fit", "Report"]:
+        assert label in nav
+
+    assert "WorkflowTopNav" in shell
+    assert "WorkflowSidebar" not in shell
+    assert "StartHerePage" not in shell
+    assert "UserDocumentationPage" not in shell
 
 
-def test_default_page_is_start_here_and_task_pages_exist():
+def test_default_page_is_import_data_and_four_task_pages_exist():
     page = read_repo_file("frontend/src/pages/FittingPage.tsx")
     layout_hook = read_repo_file("frontend/src/pages/hooks/useWorkflowLayoutState.ts")
-    start_page = read_repo_file("frontend/src/pages/components/StartHerePage.tsx")
     workflow_sections = read_repo_file("frontend/src/pages/components/WorkflowSections.tsx")
     report_page = read_repo_file("frontend/src/pages/components/ReportWorkflowPage.tsx")
-    status = read_repo_file("frontend/src/pages/components/WorkflowStatus.tsx")
-    assert 'useState<AppView>("start")' in layout_hook
-    for marker, text in [
-        ("function StartHerePage", start_page),
-        ("function ModelWorkflowPage", workflow_sections),
-        ("function FittingWorkflowPage", workflow_sections),
-        ("function ReportWorkflowPage", report_page),
-        ("WorkflowContextBar", status),
-        ("UserDocumentationPage", page),
-    ]:
-        assert marker in text
+
+    assert 'useState<WorkflowStep>("data")' in layout_hook
+    assert 'activeView === "data"' in page
+    assert 'activeView === "model"' in page
+    assert 'activeView === "fitting"' in page
+
+    assert "function ModelWorkflowPage" in workflow_sections
+    assert "function FittingWorkflowPage" in workflow_sections
+    assert "function ReportWorkflowPage" in report_page
 
 
-def test_existing_components_are_moved_to_task_specific_pages():
+def test_existing_components_are_kept_on_task_specific_pages():
     page = read_repo_file("frontend/src/pages/FittingPage.tsx")
     workflow_sections = read_repo_file("frontend/src/pages/components/WorkflowSections.tsx")
     report_page = read_repo_file("frontend/src/pages/components/ReportWorkflowPage.tsx")
+
     assert "DataImportWorkspace" in page
     assert "ModelBuilder" in workflow_sections
     assert "EquationPreview" in workflow_sections
@@ -46,15 +50,31 @@ def test_existing_components_are_moved_to_task_specific_pages():
     assert "PlotWorkspace" in workflow_sections
     assert "ParameterTable" in workflow_sections
     assert "FitProcessDiagnostics" in report_page
-    assert "UserDocumentationPage" in page
 
 
-def test_global_context_and_report_page_exports_are_present():
-    status = read_repo_file("frontend/src/pages/components/WorkflowStatus.tsx")
+def test_four_step_shell_is_centered_and_has_no_global_utilities():
+    nav = read_repo_file("frontend/src/components/WorkflowTopNav.tsx")
+    page = read_repo_file("frontend/src/pages/FittingPage.tsx")
+    layout_hook = read_repo_file("frontend/src/pages/hooks/useWorkflowLayoutState.ts")
+    css = read_repo_file("frontend/src/styles/four-step-shell.css")
+
+    assert "onLanguageChange" not in nav
+    assert "zoomControl" not in nav
+    assert "workflow-version" not in nav
+    assert "中文" not in nav
+    assert "four-step-app" in page
+    assert "four-step-workspace" in page
+    assert "sidebarCollapsed" not in layout_hook
+    assert "language" not in layout_hook
+    assert "grid-template-columns: repeat(4" in css
+    assert "justify-content: center" in css
+    assert "workflow-top-utilities" not in css
+
+
+def test_report_page_exports_are_present():
     report_page = read_repo_file("frontend/src/pages/components/ReportWorkflowPage.tsx")
     client = read_repo_file("frontend/src/api/client.ts")
-    assert "workflow-context-bar" in status
-    assert "Next:" in status
+
     assert "Download report CSV" in report_page
     assert "Download HTML report" in report_page
     assert "Download parameter CSV" not in report_page

@@ -251,12 +251,11 @@ export function aggregateCurrentEquation(): string {
 }
 
 // ---------------------------------------------------------------------------
-// Physical role descriptions (bilingual, per-component)
+// Physical role descriptions (per-component)
 // ---------------------------------------------------------------------------
 
 interface RoleDescription {
   en: string;
-  zh: string;
 }
 
 /**
@@ -273,36 +272,30 @@ export function componentPhysicalRole(comp: ComponentSpec, language: Language): 
     if (isOhmic(comp)) {
       return {
         en: `${name}: main-path series resistance; it consumes part of the applied voltage before branch currents are evaluated.`,
-        zh: `${name}: 主路串联电阻，消耗一部分外部电压。`,
       };
     }
     if (isBarrier(comp)) {
       return {
         en: `${name}: diode-like main-path barrier; it changes how terminal voltage maps to internal voltage.`,
-        zh: `${name}: 主路类二极管势垒，改变端口电压到内部电压的映射。`,
       };
     }
     if (isCustom(comp)) {
       return {
         en: `${name}: custom/user-defined main-path voltage drop term; contributes ΔV along the main current path.`,
-        zh: `${name}: 用户自定义主路压降项，沿主电流路径贡献 ΔV。`,
       };
     }
     if (isConductanceModifier(comp)) {
       return {
         en: `${name}: series conductance modifier; it changes effective main-path resistance.`,
-        zh: `${name}: 串联电导调制，改变有效主路电阻。`,
       };
     }
     if (isForwardPower(comp)) {
       return {
         en: `${name}: main-path softplus voltage drop; it adds a nonlinear voltage loss.`,
-        zh: `${name}: 主路 softplus 电压降，增加非线性压降。`,
       };
     }
     return {
       en: `${name}: main-path term using ${law}.`,
-      zh: `${name}: 主路项，使用 ${law} law。`,
     };
   }
 
@@ -310,54 +303,45 @@ export function componentPhysicalRole(comp: ComponentSpec, language: Language): 
   if (isDiode(comp)) {
     return {
       en: `${name}: Shockley diode branch; it adds exponential junction current at the internal voltage.`,
-      zh: `${name}: Shockley 二极管支路，在内部电压下产生指数结电流。`,
     };
   }
   if (isOhmic(comp)) {
     return {
       en: `${name}: Ohmic leakage/shunt branch; it adds a nearly linear current at the internal junction voltage.`,
-      zh: `${name}: 欧姆漏电/旁路支路，在内部电压下产生近似线性电流。`,
     };
   }
   if (isPhotocurrent(comp)) {
     if (isBiasDependent(comp)) {
       return {
         en: `${name}: bias-dependent photocurrent; its magnitude changes with junction voltage.`,
-        zh: `${name}: 偏压相关光电流，幅值随结点电压变化。`,
       };
     }
     return {
       en: `${name}: photocurrent source; it contributes a nearly constant light-generated current.`,
-      zh: `${name}: 光电流源，提供近似恒定的光生电流。`,
     };
   }
   if (isForwardPower(comp)) {
     return {
       en: `${name}: forward power-law branch; it turns on softly above a threshold.`,
-      zh: `${name}: 正向幂律支路，在阈值上方缓慢开启。`,
     };
   }
   if (isBreakdown(comp)) {
     return {
       en: `${name}: reverse-bias leakage / soft breakdown contribution.`,
-      zh: `${name}: 反向偏置漏电 / 软击穿贡献。`,
     };
   }
   if (isBiasDependent(comp)) {
     return {
       en: `${name}: bias-dependent current branch; its magnitude can change with bias.`,
-      zh: `${name}: 偏压相关电流支路，幅值随偏压变化。`,
     };
   }
   if (isCustom(comp)) {
     return {
       en: `${name}: custom/user-defined branch current term.`,
-      zh: `${name}: 用户自定义支路电流项。`,
     };
   }
   return {
     en: `${name}: branch term using ${law}.`,
-    zh: `${name}: 支路项，使用 ${law} law。`,
   };
 }
 
@@ -366,8 +350,8 @@ export function componentPhysicalRole(comp: ComponentSpec, language: Language): 
  */
 export function componentZoneLabel(comp: ComponentSpec, language: Language): string {
   const z = zone(comp);
-  if (z === "main") return language === "zh" ? "主路" : "Main path";
-  return language === "zh" ? "支路" : "Branch";
+  if (z === "main") return "Main path";
+  return "Branch";
 }
 
 /**
@@ -379,12 +363,11 @@ export function componentRoleBadge(comp: ComponentSpec): string {
 }
 
 // ---------------------------------------------------------------------------
-// Parameter meanings (bilingual)
+// Parameter meanings
 // ---------------------------------------------------------------------------
 
 interface ParamMeaning {
   en: string;
-  zh: string;
 }
 
 /**
@@ -402,61 +385,51 @@ export function parameterMeaning(
   if (/^n$/i.test(paramName)) {
     return {
       en: `Ideality factor for ${name}. Controls how steeply the diode-like exponential turns on. Typical values are 1–2; larger values usually need review.`,
-      zh: `${name} 的理想因子，控制类二极管指数开启的陡峭程度。典型值约 1–2；更大值通常需要检查。`,
     };
   }
   if (/^I0|I_?0$/i.test(paramName) || /I0/i.test(label)) {
     return {
       en: `Saturation current scale for ${name}. For diode-like terms this spans many decades; use physically reasonable bounds.`,
-      zh: `${name} 的饱和电流尺度。对类二极管项可能跨很多数量级，应使用物理合理边界。`,
     };
   }
   if (/Rs_ohm|^Rs$/i.test(paramName) || /^rs$/i.test(name)) {
     return {
       en: `Series resistance for ${name}. Controls high-current voltage loss and forward-bias roll-off.`,
-      zh: `${name} 的串联电阻，控制大电流区压降和正向高偏压弯折。`,
     };
   }
   if (/Rsh|Rsh_ohm/i.test(paramName) || /rsh|shunt/i.test(name)) {
     return {
       en: `Shunt/leakage resistance for ${name}. Smaller values mean stronger linear leakage.`,
-      zh: `${name} 的并联/漏电电阻；数值越小表示线性漏电越强。`,
     };
   }
   if (/^m$/i.test(paramName)) {
     return {
       en: `Power-law exponent for ${name}. Controls the curvature of the softplus power-law term.`,
-      zh: `${name} 的幂律指数，控制 softplus 幂律项的曲率。`,
     };
   }
   if (/Vt|V_t/i.test(paramName)) {
     return {
       en: `Turn-on threshold voltage for ${name}.`,
-      zh: `${name} 的开启阈值电压。`,
     };
   }
   if (/Vs|V_s/i.test(paramName)) {
     return {
       en: `Softplus smoothing scale for ${name}.`,
-      zh: `${name} 的 softplus 平滑尺度。`,
     };
   }
   if (/^A$/i.test(paramName)) {
     return {
       en: `Current/pre-factor for ${name}.`,
-      zh: `${name} 的电流/前因子。`,
     };
   }
   if (/Iph|I_ph/i.test(paramName)) {
     return {
       en: `Photocurrent magnitude for ${name}.`,
-      zh: `${name} 的光电流幅值。`,
     };
   }
 
   return {
     en: `${label} for ${name}.`,
-    zh: `${name} 的 ${label}。`,
   };
 }
 
@@ -561,7 +534,7 @@ export function componentPlainRoleText(
   comp: ComponentSpec,
   language: Language,
 ): string {
-  return componentPhysicalRole(comp, language)[language === "zh" ? "zh" : "en"];
+  return componentPhysicalRole(comp, language)["en"];
 }
 
 /**
@@ -576,38 +549,24 @@ export function softplusDefinitionLatex(): string {
  */
 export function beginnerBranchMeaning(comp: ComponentSpec, language: Language): string {
   if (isDiode(comp)) {
-    return language === "zh"
-      ? "指数型二极管电流，在结点电压下求值。"
-      : "Exponential diode-like current evaluated at the junction voltage.";
+    return "Exponential diode-like current evaluated at the junction voltage.";
   }
   if (isOhmic(comp)) {
-    return language === "zh"
-      ? "线性漏电路径：Vj 越高，漏电流越大。"
-      : "Linear leakage path: higher Vj gives proportionally higher leakage current.";
+    return "Linear leakage path: higher Vj gives proportionally higher leakage current.";
   }
   if (isPhotocurrent(comp)) {
-    return language === "zh"
-      ? "光生电流，幅值近似恒定。"
-      : "Light-generated current with nearly constant magnitude.";
+    return "Light-generated current with nearly constant magnitude.";
   }
   if (isBiasDependent(comp)) {
-    return language === "zh"
-      ? "经验支路电流，幅值可随偏压变化。"
-      : "Empirical branch current whose magnitude can change with bias.";
+    return "Empirical branch current whose magnitude can change with bias.";
   }
   if (isForwardPower(comp)) {
-    return language === "zh"
-      ? "额外经验电流，在阈值附近缓慢开启。"
-      : "Extra empirical current that turns on softly near a threshold.";
+    return "Extra empirical current that turns on softly near a threshold.";
   }
   if (isBreakdown(comp)) {
-    return language === "zh"
-      ? "反向偏置漏电或软击穿贡献。"
-      : "Reverse-bias leakage or soft breakdown contribution.";
+    return "Reverse-bias leakage or soft breakdown contribution.";
   }
-  return language === "zh"
-    ? "此支路为总电流贡献一个电流项。"
-    : "This branch contributes one current term to the terminal current.";
+  return "This branch contributes one current term to the terminal current.";
 }
 
 // ---------------------------------------------------------------------------

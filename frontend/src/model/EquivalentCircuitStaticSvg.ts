@@ -73,7 +73,7 @@ export function renderEquivalentCircuitSvg(
 
   // Vext terminal
   const vextX = padX;
-  nodes.push({ id: "vext", x: vextX, y: mainY, width: termW, height: termH, label: "Vext", subtitle: language === "zh" ? "外加偏压" : "external", kind: "terminal" });
+  nodes.push({ id: "vext", x: vextX, y: mainY, width: termW, height: termH, label: "Vext", subtitle: "external", kind: "terminal" });
 
   // Main path components
   let currentX = vextX + termW + 12;
@@ -103,7 +103,7 @@ export function renderEquivalentCircuitSvg(
 
   // Vi terminal
   const viX = lastMainX + 16;
-  nodes.push({ id: "vi", x: viX, y: mainY, width: termW, height: termH, label: "Vi", subtitle: language === "zh" ? "内结点" : "internal", kind: "terminal" });
+  nodes.push({ id: "vi", x: viX, y: mainY, width: termW, height: termH, label: "Vi", subtitle: "internal", kind: "terminal" });
   wires.push({ id: "w:vi-in", x1: lastMainX, y1: mainY, x2: viX, y2: mainY });
 
   // Branch components
@@ -156,7 +156,7 @@ export function renderEquivalentCircuitSvg(
 
   // V=0 terminal
   const gndY = mainY;
-  nodes.push({ id: "gnd", x: groundX, y: gndY, width: termW, height: termH, label: "V=0", subtitle: language === "zh" ? "参考端" : "reference", kind: "terminal" });
+  nodes.push({ id: "gnd", x: groundX, y: gndY, width: termW, height: termH, label: "V=0", subtitle: "reference", kind: "terminal" });
   wires.push({ id: "w:bus-gnd", x1: rightBusX, y1: gndY, x2: groundX, y2: gndY });
 
   // Render SVG

@@ -1,95 +1,48 @@
 import type { Language } from "../model/i18n";
-type LocalizedText = Record<Language, string>;
 
-function pick(text: LocalizedText, language: Language) {
-  return text[language] ?? text.en;
-}
-
-const functionLabels: Record<string, LocalizedText> = {
-  diode: { en: "Shockley diode", zh: "二极管指数电流" },
-  series_diode_barrier: { en: "Diode-like series barrier drop", zh: "类二极管串联势垒压降" },
-  softplus_rs_modifier: { en: "Bias-dependent series conductance modifier", zh: "偏压相关串联电导调制" },
-  power_law: { en: "Soft-threshold power-law current branch", zh: "软阈值幂律电流支路" },
-  soft_breakdown: { en: "Reverse leakage / soft-breakdown current", zh: "反向漏电 / 软击穿电流" },
-  photocurrent_constant: { en: "Constant photocurrent", zh: "常数光电流" },
-  bias_dependent_current: { en: "Bias-dependent current branch", zh: "偏压相关电流支路" },
-  photocurrent_voltage_dependent: { en: "Bias-dependent current branch", zh: "偏压相关电流支路" },
-  voltage_dependent_photocurrent: { en: "Bias-dependent current branch", zh: "偏压相关电流支路" },
-  custom: { en: "User-defined law", zh: "用户自定义定律" },
+const functionLabels: Record<string, string> = {
+  diode: "Shockley diode",
+  series_diode_barrier: "Diode-like series barrier drop",
+  softplus_rs_modifier: "Bias-dependent series conductance modifier",
+  power_law: "Soft-threshold power-law current branch",
+  soft_breakdown: "Reverse leakage / soft-breakdown current",
+  photocurrent_constant: "Constant photocurrent",
+  bias_dependent_current: "Bias-dependent current branch",
+  photocurrent_voltage_dependent: "Bias-dependent current branch",
+  voltage_dependent_photocurrent: "Bias-dependent current branch",
+  custom: "User-defined law",
 };
 
-export function localizedFunctionLabel(functionType: string, fallback: string, language: Language) {
-  const text = functionLabels[functionType];
-  return text ? pick(text, language) : fallback;
+export function localizedFunctionLabel(
+  functionType: string,
+  fallback: string,
+  _language: Language,
+) {
+  return functionLabels[functionType] ?? fallback;
 }
 
 export const parameterTableText = {
-  help: {
-    en: "Parameters are grouped by placement and component. Edit initial values, bounds, and Fit/Fixed state directly in the table.",
-    zh: "参数按位置和组件分组。初值、边界和 Fit/Fixed 状态直接在表格中编辑。",
-  },
-  fittedCountSuffix: {
-    en: "fitted",
-    zh: "参与拟合",
-  },
-  batchFitAll: {
-    en: "Fit all",
-    zh: "全部拟合",
-  },
-  batchFixAll: {
-    en: "Fix all",
-    zh: "全部固定",
-  },
-  initial: {
-    en: "Initial",
-    zh: "初值",
-  },
-  fitted: {
-    en: "Fitted",
-    zh: "拟合值",
-  },
-  lower: {
-    en: "Lower",
-    zh: "下限",
-  },
-  upper: {
-    en: "Upper",
-    zh: "上限",
-  },
-  fitQuestion: {
-    en: "Fit?",
-    zh: "拟合?",
-  },
-  meaningColumn: {
-    en: "Information",
-    zh: "这个参数在说什么",
-  },
-  initialTitle: {
-    en: "Initial value for next fit",
-    zh: "下一次拟合的初始值",
-  },
-  lowerTitle: {
-    en: "Lower bound; blank means unbounded",
-    zh: "下边界，空白表示无下限",
-  },
-  upperTitle: {
-    en: "Upper bound; blank means unbounded",
-    zh: "上边界，空白表示无上限",
-  },
-  currentBounds: {
-    en: "Current bounds",
-    zh: "当前边界",
-  },
-  polarity: {
-    en: "polarity",
-    zh: "极性",
-  },
-  noPolarity: {
-    en: "no polarity",
-    zh: "无极性",
-  },
-} satisfies Record<string, LocalizedText>;
+  help: "Parameters are grouped by placement and component. Edit initial values, bounds, and Fit/Fixed state directly in the table.",
+  fittedCountSuffix: "fitted",
+  batchFitAll: "Fit all",
+  batchFixAll: "Fix all",
+  initial: "Initial",
+  fitted: "Fitted",
+  lower: "Lower",
+  upper: "Upper",
+  fitQuestion: "Fit?",
+  meaningColumn: "Information",
+  initialTitle: "Initial value for next fit",
+  lowerTitle: "Lower bound; blank means unbounded",
+  upperTitle: "Upper bound; blank means unbounded",
+  currentBounds: "Current bounds",
+  polarity: "polarity",
+  noPolarity: "no polarity",
+} as const;
 
-export function parameterText(key: keyof typeof parameterTableText, language: Language) {
-  return pick(parameterTableText[key], language);
+export function parameterText(
+  key: keyof typeof parameterTableText,
+  _language: Language,
+) {
+  return parameterTableText[key];
 }

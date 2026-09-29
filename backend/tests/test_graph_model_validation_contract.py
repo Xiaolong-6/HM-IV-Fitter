@@ -1,0 +1,316 @@
+import numpy as np
+
+from ivfitter.core.graph_solver import solve_graph_current
+from ivfitter.core.model_spec import (
+    GraphComponent,
+    GraphNode,
+    GraphSpec,
+    ModelSpec,
+    ParameterSpec,
+)
+from ivfitter.core.model_validation import validate_model_spec
+
+
+def p(value, lower=None, upper=None, fit=True, unit=None):
+    return ParameterSpec(
+        value=value,
+        lower=lower,
+        upper=upper,
+        fit=fit,
+        unit=unit,
+    )
+
+
+def graph_model(component: GraphComponent) -> ModelSpec:
+    return ModelSpec(
+        graph=GraphSpec(
+            terminals=["V"],
+            reference_node="GND",
+            nodes=[
+                GraphNode(id="V", role="terminal"),
+                GraphNode(id="GND", role="reference"),
+            ],
+            components=[component],
+            schema_version="model_builder",
+        ),
+        temperature_K=300.0,
+    )
+
+
+def error_codes(model: ModelSpec) -> set[str]:
+    return {
+        warning.code
+        for warning in validate_model_spec(model)
+        if warning.severity == "error"
+    }
+
+
+def test_graph_shockley_expression_accepts_kb_and_evaluates_finitely():
+    component = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        polarity="forward",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0, unit="A"),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(300.0, 250.0, 380.0, fit=False, unit="K"),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+            "templateKey": "shockley_diode",
+        },
+    )
+    model = graph_model(component)
+
+    assert "graph_custom_invalid_expression" not in error_codes(model)
+
+    current, branches = solve_graph_current(np.asarray([0.0, 0.1]), model)
+    assert np.all(np.isfinite(current))
+    assert np.all(np.isfinite(branches["D1"]))
+    assert current[1] > current[0]
+
+
+def test_graph_constant_current_accepts_arbitrary_i0_parameter():
+    component = GraphComponent(
+        id="I1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        polarity="forward",
+        params={"I0": p(1e-6, -1.0, 1.0, unit="A")},
+        metadata={"behavior": "I_of_V", "expression": "I0"},
+    )
+    model = graph_model(component)
+
+    assert "graph_custom_invalid_expression" not in error_codes(model)
+
+    current, _branches = solve_graph_current(np.asarray([-1.0, 0.0, 1.0]), model)
+    np.testing.assert_allclose(current, [1e-6, 1e-6, 1e-6])
+
+
+def test_graph_custom_rejects_unknown_expression_symbol():
+    component = GraphComponent(
+        id="C1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"A": p(1.0)},
+        metadata={"behavior": "I_of_V", "expression": "A*V+B"},
+    )
+
+    assert "graph_custom_invalid_expression" in error_codes(graph_model(component))
+
+
+def test_graph_custom_residual_contract_is_validated_without_legacy_bucket():
+    component = GraphComponent(
+        id="F1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="implicit_relation",
+        placement="constraint",
+        node_pos="V",
+        node_neg="GND",
+        params={"R": p(1000.0, 1.0, 1e9)},
+        metadata={"behavior": "custom_residual", "expression": "V-I*R"},
+    )
+
+    codes = error_codes(graph_model(component))
+    assert "graph_custom_evaluation_form" not in codes
+    assert "graph_custom_placement" not in codes
+    assert "graph_custom_invalid_expression" not in codes
+
+
+def test_graph_rejects_dangling_component_node_reference():
+    component = GraphComponent(
+        id="R1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="missing",
+        params={"R": p(1000.0, 1.0, 1e9)},
+        metadata={"behavior": "R_of_V", "expression": "R"},
+    )
+
+    assert "graph_unknown_node" in error_codes(graph_model(component))
+
+
+def test_graph_builtin_resistance_rejects_zero_ohm_singularity():
+    component = GraphComponent(
+        id="R1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"R": p(0.0, 0.0, 1e9, unit="ohm")},
+        metadata={
+            "behavior": "R_of_V",
+            "expression": "R",
+            "templateKey": "resistance",
+        },
+    )
+
+    assert "graph_nonpositive_resistance" in error_codes(graph_model(component))
+
+
+def test_graph_components_must_share_model_temperature():
+    d1 = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(300.0, 250.0, 380.0, fit=False),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+    d2 = d1.model_copy(deep=True)
+    d2.id = "D2"
+    d2.params["T"].value = 320.0
+
+    model = ModelSpec(
+        graph=GraphSpec(
+            terminals=["V"],
+            reference_node="GND",
+            nodes=[
+                GraphNode(id="V", role="terminal"),
+                GraphNode(id="GND", role="reference"),
+            ],
+            components=[d1, d2],
+            schema_version="model_builder",
+        ),
+        temperature_K=300.0,
+    )
+
+    assert "graph_inconsistent_temperature" in error_codes(model)
+
+
+def test_graph_temperature_must_match_model_temperature():
+    component = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(320.0, 250.0, 380.0, fit=False),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+    model = graph_model(component)
+    model.temperature_K = 300.0
+
+    assert "graph_temperature_mismatch" in error_codes(model)
+
+
+def test_graph_temperature_parameter_must_remain_fixed():
+    component = GraphComponent(
+        id="D1",
+        function_type="custom",
+        law_id="shockley_diode",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={
+            "I0": p(1e-12, 1e-30, 1.0),
+            "n": p(1.5, 0.5, 10.0),
+            "T": p(300.0, 250.0, 380.0, fit=True),
+        },
+        metadata={
+            "behavior": "I_of_V",
+            "expression": "I0*(exp(V/(n*kB*T))-1)",
+        },
+    )
+
+    assert "graph_temperature_must_be_fixed" in error_codes(graph_model(component))
+
+
+def test_graph_custom_parameter_cannot_shadow_solver_variable_or_function():
+    variable_shadow = GraphComponent(
+        id="C1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"V": p(2.0)},
+        metadata={"behavior": "I_of_V", "expression": "V"},
+    )
+    function_shadow = GraphComponent(
+        id="C2",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"exp": p(2.0), "A": p(1.0)},
+        metadata={"behavior": "I_of_V", "expression": "A*exp(V)"},
+    )
+    kb_shadow = GraphComponent(
+        id="C3",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"kB": p(1.0)},
+        metadata={"behavior": "I_of_V", "expression": "kB"},
+    )
+
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(variable_shadow))
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(function_shadow))
+    assert "graph_reserved_parameter_name" in error_codes(graph_model(kb_shadow))
+
+
+def test_fitted_builtin_resistance_requires_strictly_positive_lower_bound():
+    component = GraphComponent(
+        id="R1",
+        function_type="custom",
+        law_id="custom_expression",
+        evaluation_form="current_branch",
+        placement="parallel_current_branch",
+        node_pos="V",
+        node_neg="GND",
+        params={"R": p(1000.0, 0.0, 1e9, fit=True, unit="ohm")},
+        metadata={
+            "behavior": "R_of_V",
+            "expression": "R",
+            "templateKey": "resistance",
+        },
+    )
+
+    assert "graph_resistance_bound_includes_zero" in error_codes(graph_model(component))

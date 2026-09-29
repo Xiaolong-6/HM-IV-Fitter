@@ -40,7 +40,7 @@ export const MB3_BUILT_IN_PRESETS: Mb3SavedPreset[] = [
           expression: "Rs",
           sign: 1,
           position: { x: 430, y: 260 },
-          parameters: [{ symbol: "Rs", value: 10, lower: 0, upper: 1e9, fit: true, unit: "ohm" }],
+          parameters: [{ symbol: "Rs", value: 10, lower: 1e-12, upper: 1e9, fit: true, unit: "ohm" }],
         },
         {
           id: "D1",

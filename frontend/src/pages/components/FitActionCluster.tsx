@@ -5,6 +5,7 @@ import { t } from "../../model/i18n";
 
 export function FitActionButtons({
   hasSelectedTrace,
+  hasRunnableModel,
   isFitting,
   result,
   language,
@@ -12,6 +13,7 @@ export function FitActionButtons({
   onStopFit,
 }: {
   hasSelectedTrace: boolean;
+  hasRunnableModel: boolean;
   isFitting: boolean;
   result: FitResult | null;
   language: Language;
@@ -19,7 +21,7 @@ export function FitActionButtons({
   onStopFit: () => void;
 }) {
   const completed = !!result && !isFitting;
-  const canRun = hasSelectedTrace && !isFitting;
+  const canRun = hasSelectedTrace && hasRunnableModel && !isFitting;
 
   let label: string;
   let icon: string;
@@ -27,20 +29,27 @@ export function FitActionButtons({
   let title: string | undefined;
 
   if (isFitting) {
-    label = language === "zh" ? "停止拟合" : "Stop fit";
+    label = "Stop fit";
     icon = "■";
     className = "primary fit-action-stop";
-    title = language === "zh" ? "中断当前拟合" : "Abort the running fit";
+    title = "Abort the running fit";
   } else if (completed) {
-    label = language === "zh" ? "重新拟合" : "Run again";
+    label = "Run again";
     icon = "▶";
     className = "primary";
     title = undefined;
   } else {
     label = t(language, "runFit");
     icon = "▶";
-    className = hasSelectedTrace ? "primary" : "fit-action-unavailable";
-    title = !hasSelectedTrace ? (language === "zh" ? "请先导入数据" : "Import data before running a fit.") : undefined;
+    className =
+      hasSelectedTrace && hasRunnableModel
+        ? "primary"
+        : "fit-action-unavailable";
+    title = !hasSelectedTrace
+      ? "Import data before running a fit."
+      : !hasRunnableModel
+        ? "Build a complete V-to-GND model before fitting."
+        : undefined;
   }
 
   return (
@@ -67,12 +76,12 @@ export function FitReportButton({
   onMakeReport: () => void;
   reportAvailable: boolean;
 }) {
-  const label = language === "zh" ? "报告 →" : "Report →";
+  const label = "Report →";
   const hint = !result
-    ? (language === "zh" ? "完成拟合后可用" : "Available after fit")
+    ? ("Available after fit")
     : reportAvailable
-      ? (language === "zh" ? "查看报告" : "View report")
-      : (language === "zh" ? "报告暂不可用" : "Report unavailable");
+      ? ("View report")
+      : ("Report unavailable");
 
   return (
     <button
@@ -90,6 +99,7 @@ export function FitReportButton({
 
 export function FitMessages({
   hasTrace,
+  hasRunnableModel,
   error,
   isFitting,
   fitPromotionNotice,
@@ -97,6 +107,7 @@ export function FitMessages({
   onRetry,
 }: {
   hasTrace: boolean;
+  hasRunnableModel: boolean;
   error: string | null;
   isFitting: boolean;
   fitPromotionNotice: string | null;
@@ -109,6 +120,12 @@ export function FitMessages({
         <div className="fit-primary-message empty">
           <strong>No trace loaded.</strong>
           <span>Import data or load a synthetic example before fitting.</span>
+        </div>
+      ) : null}
+      {hasTrace && !hasRunnableModel && !error ? (
+        <div className="fit-primary-message empty">
+          <strong>No runnable model.</strong>
+          <span>Build a complete V-to-GND model in Model builder before fitting.</span>
         </div>
       ) : null}
       {fitPromotionNotice ? (

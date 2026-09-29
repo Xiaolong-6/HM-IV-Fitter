@@ -1,46 +1,54 @@
 # Roadmap
 
-This file replaces older roadmap fragments.
+## Current product direction
 
-## Current status
+HM-IV-Fitter is moving to a static-browser-first product.
 
-The Web UI is an internal alpha/prototype with a working local browser workflow and a new default **Model Builder** schematic editor.
+Primary workflow:
 
-Current capabilities:
+1. Import data
+2. Model builder
+3. Fit
+4. Report
 
-- Data import and pasted-data import.
-- HappyMeasure CSV v2 compatibility.
-- Model Builder: the single active frontend builder path, with a graph-native free two-terminal schematic editor, fixed V/GND terminals, drag-in components, a dependency-light iframe canvas, presets/save, canvas Synthetic IV trace action, Go to fitting action, and V-to-GND validation.
-- Fit diagnostics, warnings, residual plots, and formula/report preview on the main workflow.
-- User-facing manual and external testing guide.
+The browser build runs the Python/SciPy fitting core locally through Pyodide/Web Worker. The FastAPI path is retained as a development and numerical-oracle path while browser parity is being formalized.
 
-## Near-term priorities
+## Immediate priorities
 
-1. Stabilize Model Builder browser behavior on Windows: no blank canvas, no hidden panels, reliable preview-canvas rendering, and toolbar actions that stay inside the canvas layer.
-2. Expand Model Builder test coverage: graph mutations, component templates, validation, toolbar actions, and screenshot/manual smoke checks.
-3. Connect Model Builder graph state to the backend graph solver with explicit user-facing limitations.
-4. Continue integrating Model Builder-adjacent tools: equation preview, registry-driven extensions, and export/report synchronization. Synthetic IV trace and Go to fitting are now canvas toolbar actions.
-5. Fit-quality verdicts with clearer user actions.
-6. Better real-dataset regression suite, including HappyMeasure and representative diode/resistor/custom-law traces.
+1. Merge the validated static-browser implementation to `main`.
+2. Make GitHub Pages build directly from `main`.
+3. Remove obsolete desktop-era application code, packaging scripts, and documentation that no longer describe a supported product path.
+4. Build a real-data regression corpus with expected parameter/metric tolerances.
+5. Formalize CPython/FastAPI vs Pyodide numerical parity as a release gate.
+6. Improve data-driven initial-value and bounds recommendations while preserving user-edited values.
 
-## Release-candidate priorities
+## Scientific validation priorities
 
-- Confirm parity against the mature desktop/Tkinter workflow on representative IV datasets.
-- Stabilize JSON export/import schema around `model_builder` and older-model compatibility loading.
-- Decide packaging strategy: browser-local scripts, desktop wrapper, or other local launcher.
-- Add benchmark traces with expected-fit tolerances.
-- Add browser smoke/screenshot coverage for Model Builder: empty graph, single component, V-to-GND connected graph, disconnected component, and custom law editing.
-- Run browser manual tests on Windows, mobile portrait, and LAN phone/tablet modes.
+Representative regression cases should cover:
 
-## Product guardrail
+- ohmic / shunt resistance;
+- diode;
+- diode + series resistance;
+- diode + shunt resistance;
+- diode + series + shunt;
+- soft breakdown;
+- power-law/current branches;
+- graph-native custom laws;
+- HappyMeasure real IV traces;
+- deliberately poor or non-identifiable fits.
 
-Do not add features that make the core workflow slower, less reliable, or harder to explain: import I-V data, build a physically interpretable model, fit, inspect diagnostics, and export defensible results.
+For each case, retain the input trace, model, starting parameters, bounds, expected parameter tolerance, diagnostics, warnings, reportability state, and browser/CPython parity result.
 
-For Model Builder, do not reintroduce hidden legacy placement assumptions. The user-facing model editor is a schematic graph: fixed V/GND terminals, two-terminal components, wires, validation, and compilation of only the active V-to-GND subgraph.
+## Product guardrails
 
-## API compatibility lifecycle
+Do not add UI features that obscure the core scientific workflow: import IV data, define an interpretable model, fit, inspect residuals/diagnostics, and export a defensible result.
 
-- `/api/v2/...` is the canonical frontend/backend API path.
-- Bare `/api/...` aliases are retained for pre-v2 local clients and old scripts.
-- Do not remove aliases until an external beta has confirmed no active tester package depends on them.
-- When removal is approved, document the target version here and in `CHANGELOG.md` before deleting decorators.
+Do not reintroduce hidden legacy placement assumptions into Model Builder. The stored graph is the authoritative topology.
+
+Do not call a fit scientifically validated solely because the backend marks it reportable. Reportability is an internal numerical/product gate; scientific interpretation remains explicit.
+
+## Compatibility lifecycle
+
+- `/api/v2/...` remains the canonical development/server API.
+- Bare `/api/...` aliases are legacy compatibility surfaces and should be removed only after confirming no retained tests/tools require them.
+- Saved-model compatibility should be evaluated separately from removal of obsolete desktop UI code. A compatibility reader may remain even when the old UI is deleted.

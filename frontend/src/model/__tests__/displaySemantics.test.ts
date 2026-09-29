@@ -71,7 +71,6 @@ describe("Rs (Ohmic series, main path)", () => {
 
   it("zone label is Main path", () => {
     expect(componentZoneLabel(rs, "en")).toBe("Main path");
-    expect(componentZoneLabel(rs, "zh")).toBe("主路");
   });
 
   it("role badge is ΔV", () => {
@@ -380,9 +379,9 @@ describe("Parameter meanings", () => {
     expect(meaning.en).toContain("Series resistance");
   });
 
-  it("Chinese translations are provided", () => {
-    const meaning = parameterMeaning(rs, "Rs_ohm", "zh");
-    expect(meaning.zh).toContain("串联电阻");
+  it("series resistance meaning is available in English", () => {
+    const meaning = parameterMeaning(rs, "Rs_ohm", "en");
+    expect(meaning.en).toContain("Series resistance");
   });
 });
 
@@ -390,18 +389,16 @@ describe("Parameter meanings", () => {
 // Bilingual consistency
 // ---------------------------------------------------------------------------
 
-describe("Bilingual consistency", () => {
+describe("English display consistency", () => {
   const d1 = makeComp({ id: "D1", function_type: "diode", law_id: "shockley_diode", location: "core", metadata: { nickname: "D1" } });
 
-  it("English and Chinese roles both mention the component name", () => {
+  it("role text mentions the component name", () => {
     const role = componentPhysicalRole(d1, "en");
     expect(role.en).toContain("D1");
-    expect(role.zh).toContain("D1");
   });
 
-  it("English and Chinese zone labels are provided", () => {
+  it("zone label is available", () => {
     expect(componentZoneLabel(d1, "en")).toBeTruthy();
-    expect(componentZoneLabel(d1, "zh")).toBeTruthy();
   });
 });
 

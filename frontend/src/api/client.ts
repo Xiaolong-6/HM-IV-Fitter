@@ -1,4 +1,5 @@
 import type { BoundsSuggestionResponse, FitConfig, FitResult, FunctionDefinition, ModelSpec, TraceData, EquationSummary, FitWarning, SyntheticTraceRequest, SyntheticTraceResponse } from "../model/types";
+import { browserCall, browserRuntimeEnabled } from "./browserRuntime";
 
 function resolveApiBase(): string {
   const configured = import.meta.env.VITE_API_BASE;
@@ -17,6 +18,7 @@ function resolveApiBase(): string {
 const API_BASE = resolveApiBase();
 const API_TOKEN = (import.meta.env.VITE_IVFITTER_API_TOKEN || "").trim();
 const API_PREFIX = "/api/v2";
+const USE_BROWSER_RUNTIME = browserRuntimeEnabled();
 
 function jsonHeaders(): Record<string, string> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -35,16 +37,41 @@ async function postJson<T>(path: string, payload: unknown, init?: { signal?: Abo
 }
 
 export async function getRegistry(): Promise<FunctionDefinition[]> {
+  if (USE_BROWSER_RUNTIME) return browserCall("component_registry", null);
   const response = await fetch(`${API_BASE}${API_PREFIX}/component-registry`, { headers: getHeaders() });
   if (!response.ok) throw new Error(await response.text());
   return response.json();
 }
-export async function validateModel(model: ModelSpec): Promise<FitWarning[]> { return postJson(`${API_PREFIX}/validate-model`, model); }
-export async function equations(model: ModelSpec, signal?: AbortSignal): Promise<EquationSummary> { return postJson(`${API_PREFIX}/equations`, model, { signal }); }
-export async function fitTrace(trace: TraceData, model: ModelSpec, config: FitConfig, signal?: AbortSignal): Promise<FitResult> { return postJson(`${API_PREFIX}/fit`, { trace, model, config }, { signal }); }
-export async function suggestBounds(trace: TraceData, model: ModelSpec, config: FitConfig, signal?: AbortSignal): Promise<BoundsSuggestionResponse> { return postJson(`${API_PREFIX}/suggest-bounds`, { trace, model, config }, { signal }); }
-export async function exportReport(result: FitResult): Promise<{ markdown: string }> { return postJson(`${API_PREFIX}/export-report`, result); }
-export async function exportReportCsv(result: FitResult): Promise<{ text: string }> { return postJson(`${API_PREFIX}/export-report-csv`, result); }
+
+export async function validateModel(model: ModelSpec, signal?: AbortSignal): Promise<FitWarning[]> {
+  if (USE_BROWSER_RUNTIME) return browserCall("validate_model", model, signal);
+  return postJson(`${API_PREFIX}/validate-model`, model, { signal });
+}
+
+export async function equations(model: ModelSpec, signal?: AbortSignal): Promise<EquationSummary> {
+  if (USE_BROWSER_RUNTIME) return browserCall("equations", model, signal);
+  return postJson(`${API_PREFIX}/equations`, model, { signal });
+}
+
+export async function fitTrace(trace: TraceData, model: ModelSpec, config: FitConfig, signal?: AbortSignal): Promise<FitResult> {
+  if (USE_BROWSER_RUNTIME) return browserCall("fit", { trace, model, config }, signal);
+  return postJson(`${API_PREFIX}/fit`, { trace, model, config }, { signal });
+}
+
+export async function suggestBounds(trace: TraceData, model: ModelSpec, config: FitConfig, signal?: AbortSignal): Promise<BoundsSuggestionResponse> {
+  if (USE_BROWSER_RUNTIME) return browserCall("suggest_bounds", { trace, model, config }, signal);
+  return postJson(`${API_PREFIX}/suggest-bounds`, { trace, model, config }, { signal });
+}
+
+export async function exportReport(result: FitResult): Promise<{ markdown: string }> {
+  if (USE_BROWSER_RUNTIME) return browserCall("export_report", result);
+  return postJson(`${API_PREFIX}/export-report`, result);
+}
+
+export async function exportReportCsv(result: FitResult): Promise<{ text: string }> {
+  if (USE_BROWSER_RUNTIME) return browserCall("export_report_csv", result);
+  return postJson(`${API_PREFIX}/export-report-csv`, result);
+}
 
 export interface ImportQualitySummary {
   rows_in_file: number;
@@ -67,19 +94,28 @@ export interface ImportCsvTextMultiResponse {
 
 export interface OpenImportFileDialogResponse extends ImportCsvTextMultiResponse {
   canceled: boolean;
-  selected_path?: string | null; // Backward-compatible display label only; backend no longer returns absolute paths.
+  selected_path?: string | null;
   selected_name?: string | null;
   default_dir?: string | null;
 }
 
 export async function importCsvTextMulti(text: string, traceId = "imported_trace"): Promise<ImportCsvTextMultiResponse> {
+  if (USE_BROWSER_RUNTIME) {
+    return browserCall("import_csv_text_multi", { text, trace_id: traceId });
+  }
   return postJson(`${API_PREFIX}/import-csv-text-multi`, { text, trace_id: traceId });
 }
 
 export async function openImportFileDialog(): Promise<OpenImportFileDialogResponse> {
+  if (USE_BROWSER_RUNTIME) {
+    throw new Error(
+      "Local file dialog is not available in static browser mode. Use the browser file picker.",
+    );
+  }
   return postJson(`${API_PREFIX}/open-import-file-dialog`, {});
 }
 
 export async function generateSyntheticTrace(payload: SyntheticTraceRequest): Promise<SyntheticTraceResponse> {
+  if (USE_BROWSER_RUNTIME) return browserCall("generate_synthetic_trace", payload);
   return postJson(`${API_PREFIX}/generate-synthetic-trace`, payload);
 }

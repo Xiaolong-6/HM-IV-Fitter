@@ -25,7 +25,7 @@ export type GitHubReleasePayload = {
   assets?: Array<{ name?: string }>;
 };
 
-export const DEFAULT_RELEASE_ENDPOINT = "https://api.github.com/repos/Xiaolong-6/iv_fitter_webui_mvp/releases/latest";
+export const DEFAULT_RELEASE_ENDPOINT = "https://api.github.com/repos/Xiaolong-6/HM-IV-Fitter/releases/latest";
 
 function excerpt(body: string | null | undefined): string {
   return String(body ?? "").replace(/\s+/g, " ").trim().slice(0, 360);

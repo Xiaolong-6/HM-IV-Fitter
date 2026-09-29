@@ -64,7 +64,7 @@ export const DEFAULT_COMPONENT_TEMPLATES: PreviewComponentTemplate[] = [
     expression: "R",
     prefix: "R",
     system: true,
-    parameters: [{ symbol: "R", value: 10, lower: 0, upper: 1e9, fit: true, unit: "ohm" }],
+    parameters: [{ symbol: "R", value: 10, lower: 1e-12, upper: 1e9, fit: true, unit: "ohm" }],
   },
   {
     key: "shockley_diode",

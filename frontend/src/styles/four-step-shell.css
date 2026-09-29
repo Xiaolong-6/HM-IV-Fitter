@@ -1,0 +1,236 @@
+/* Minimal four-step browser shell shared with the Map Reconstruction visual language. */
+
+.app.four-step-app {
+  --app-zoom: 1;
+  width: 100vw;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
+  background: #f4f7fb;
+  color: #0f172a;
+}
+
+.workflow-top-shell {
+  min-width: 0;
+  display: flex;
+  justify-content: center;
+  padding: 10px 22px 0;
+  background: #f4f7fb;
+}
+
+.workflow-step-nav {
+  position: relative;
+  width: min(920px, 100%);
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workflow-step-nav::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: #dbe4f0;
+  pointer-events: none;
+}
+
+.workflow-step-tab {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #94a3b8;
+  box-shadow: none;
+  font-size: 13px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.workflow-step-tab:hover {
+  background: transparent;
+  color: #475569;
+}
+
+.workflow-step-tab.completed {
+  color: #475569;
+}
+
+.workflow-step-tab.active {
+  border-bottom-color: #315bf6;
+  background: transparent;
+  color: #315bf6;
+}
+
+.workflow-step-number {
+  color: inherit;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.workspace.four-step-workspace {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: hidden;
+  padding: 8px 18px 16px;
+}
+
+.four-step-workspace > .workflow-page,
+.four-step-workspace > .data-workspace,
+.four-step-workspace > .report-workflow-page,
+.four-step-workspace > .report-page {
+  min-height: 0;
+  height: 100%;
+}
+
+.four-step-workspace.workflow-view-model {
+  position: relative;
+}
+
+
+.browser-runtime-banner {
+  position: absolute;
+  z-index: 30;
+  top: 12px;
+  left: 50%;
+  max-width: min(760px, calc(100% - 32px));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border: 1px solid #dbe4f0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  color: #475569;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.browser-runtime-banner.loading::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 2px solid #cbd5e1;
+  border-top-color: #315bf6;
+  border-radius: 50%;
+  animation: browser-runtime-spin 0.8s linear infinite;
+}
+
+.browser-runtime-banner.error {
+  border-color: #fecaca;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+.browser-runtime-banner button {
+  flex: 0 0 auto;
+  min-height: 26px;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+@keyframes browser-runtime-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.four-step-app .sidebar,
+.four-step-app .sidebar-main,
+.four-step-app .sidebar-footer {
+  display: none !important;
+}
+
+.four-step-app .report-export-section {
+  position: static;
+  width: auto;
+}
+
+.four-step-app .report-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.four-step-app .report-section-heading > div:first-child {
+  min-width: 0;
+}
+
+.four-step-app .report-export-section h2,
+.four-step-app .report-export-section p {
+  margin-top: 0;
+}
+
+.four-step-app .report-export-section .report-export-actions-grid {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+@media (max-width: 900px) {
+  .workflow-top-shell {
+    padding: 8px 10px 0;
+  }
+
+  .workflow-step-nav {
+    width: 100%;
+  }
+
+  .workflow-step-tab {
+    height: 40px;
+    padding: 0 6px;
+  }
+
+  .workspace.four-step-workspace {
+    padding: 6px 10px 10px;
+  }
+}
+
+@media (max-width: 620px) {
+  .workflow-step-tab {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .workflow-step-number {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .four-step-app .report-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid {
+    width: 100%;
+  }
+
+  .four-step-app .report-export-section .report-export-actions-grid button {
+    flex: 1 1 0;
+  }
+}
