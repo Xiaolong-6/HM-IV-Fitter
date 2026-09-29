@@ -1425,92 +1425,10 @@
   .report-circuit-schematic { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* v1.7.8: single-column fitting page with sticky setup. */
-.fitting-page-one-column {
-  height: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: calc(18px * var(--app-zoom)) calc(16px * var(--app-zoom)) calc(40px * var(--app-zoom));
-}
-.fitting-webpage-stack {
-  width: min(100%, calc(1120px * var(--app-zoom)));
-  max-width: calc(1120px * var(--app-zoom));
-  margin: 0 auto;
-  display: grid;
-  gap: calc(16px * var(--app-zoom));
-}
-.fit-setup-sticky {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-.fitting-webpage-stack .workspace-section {
-  height: auto;
-  min-height: 0;
-  overflow: visible;
-  display: block;
-  box-shadow: none;
-  border: 0;
-  background: transparent;
-}
-.fitting-webpage-stack .workspace-section-body { padding: 0; overflow: visible; }
-.fit-config-advanced-dropdown {
-  border-top: 1px solid var(--theme-border);
-  background: #f8fafc;
-}
-.fit-config-advanced-dropdown > summary {
-  cursor: pointer;
-  padding: calc(10px * var(--app-zoom));
-  font-weight: 900;
-  color: #334155;
-}
-.fit-config-advanced-dropdown[open] > summary { border-bottom: 1px solid var(--theme-border); }
-.fit-config-advanced-dropdown .fit-config-inline-options { padding: calc(10px * var(--app-zoom)); }
-
-/* v1.7.9: compact Fit setup and non-layout-shifting Advanced popover. */
+/* Compact Fit message/status styling used by the current two-column sidebar. */
 .compact-fit-setup-panel {
   position: relative;
-  overflow: visible;
 }
-.compact-fit-setup-panel .compact-fit-config-row {
-  display: grid;
-  grid-template-columns: auto auto auto minmax(200px, auto) 1fr;
-  align-items: center;
-  gap: calc(8px * var(--app-zoom));
-  padding: calc(7px * var(--app-zoom)) calc(10px * var(--app-zoom));
-}
-.compact-fit-setup-panel .fit-config-actions {
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-.compact-fit-setup-panel .fit-config-title { flex: initial; }
-.compact-fit-setup-panel .fit-config-title h2 { font-size: calc(15px * var(--app-zoom)); white-space: nowrap; }
-.compact-fit-setup-panel .fit-config-actions,
-.compact-fit-setup-panel .fit-bottom-voltage,
-.compact-fit-setup-panel .fit-config-status { flex: initial; white-space: nowrap; }
-.compact-fit-setup-panel .fit-config-actions {
-  display: inline-flex !important;
-  gap: 6px !important;
-  align-items: center !important;
-  flex-wrap: nowrap !important;
-  white-space: nowrap !important;
-  flex: none !important;
-}
-.compact-fit-setup-panel .fit-config-actions .fit-action-row {
-  display: inline-flex !important;
-  flex-wrap: nowrap !important;
-  gap: 6px !important;
-  align-items: center !important;
-}
-.compact-fit-setup-panel .fit-config-actions .fit-action-row button {
-  white-space: nowrap !important;
-}
-.compact-fit-setup-panel .fit-bottom-voltage { margin: 0; }
-.compact-fit-setup-panel .fit-bottom-voltage-title { display: none; }
-.compact-fit-setup-panel .fit-bottom-voltage-grid { display: grid; grid-template-columns: repeat(2, minmax(88px, 1fr)); gap: calc(6px * var(--app-zoom)); }
 .compact-fit-setup-panel .fit-config-message-stack {
   display: grid;
   gap: calc(3px * var(--app-zoom));
@@ -1525,51 +1443,6 @@
   border-radius: calc(7px * var(--app-zoom));
   font-size: calc(11px * var(--app-zoom));
   line-height: 1.25;
-}
-.fit-advanced-popover-button {
-  border: 1px solid var(--theme-border);
-  background: #f8fafc;
-  color: #334155;
-  border-radius: calc(10px * var(--app-zoom));
-  padding: calc(7px * var(--app-zoom)) calc(10px * var(--app-zoom));
-  font-weight: 900;
-  white-space: nowrap;
-  width: auto;
-}
-.fit-advanced-popover-button.active { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
-.fit-config-advanced-popover {
-  position: absolute;
-  right: calc(10px * var(--app-zoom));
-  top: calc(100% + 8px);
-  z-index: 120;
-  width: min(calc(760px * var(--app-zoom)), calc(100vw - 140px));
-  max-height: min(72vh, 620px);
-  overflow: auto;
-  background: #fff;
-  border: 1px solid var(--theme-border);
-  border-radius: calc(16px * var(--app-zoom));
-  box-shadow: 0 22px 55px rgba(15, 23, 42, .22);
-  padding: calc(12px * var(--app-zoom));
-}
-.fit-config-advanced-popover-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: calc(10px * var(--app-zoom));
-  margin-bottom: calc(10px * var(--app-zoom));
-}
-.fitting-page-one-column,
-.fitting-webpage-stack {
-  min-height: 0;
-}
-.fitting-page-one-column {
-  height: 100%;
-  overflow-y: auto !important;
-  -webkit-overflow-scrolling: touch;
-}
-@media (max-width: 980px) {
-  .compact-fit-setup-panel .compact-fit-config-row { grid-template-columns: 1fr; }
-  .fit-config-advanced-popover { left: 8px; right: 8px; width: auto; }
 }
 
 /* v1.7.9: keep floating exports out of the left dock area. */
