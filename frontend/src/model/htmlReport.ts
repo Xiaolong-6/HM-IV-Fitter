@@ -11,6 +11,10 @@ function escapeHtml(value: unknown) {
     .replace(/\"/g, "&quot;");
 }
 
+function plainReportMessage(value: string | null | undefined) {
+  return String(value ?? "").replace(/`([^`]+)`/g, "$1");
+}
+
 function modelSummaryFromResult(result: FitResult) {
   const components = [
     ...result.model.series,
@@ -354,7 +358,7 @@ function warningsSection(result: FitResult) {
     (result.warnings ?? [])
       .map((warning) => `<li class="${escapeHtml(warning.severity)}"><code>${escapeHtml(warning.severity)} · ${escapeHtml(warning.code)}</code><span>${escapeHtml(warning.message)}</span></li>`)
       .join("") || "<li>No warnings or errors reported by the fitting backend.</li>";
-  return `<section class="card report-section"><h2>Warnings and diagnostics</h2><div class="diagnostic-summary"><span>Status: <strong>${escapeHtml(semantics.fitStatus)}</strong></span><span>Report mode: <strong>${escapeHtml(semantics.reportMode)}</strong></span><span>Usable as validated report: <strong>${escapeHtml(semantics.usable)}</strong></span></div><ul class="warning-list">${warningRows}</ul></section>`;
+  return `<section class="card report-section"><h2>Warnings and diagnostics</h2><div class="diagnostic-summary"><span>Status: <strong>${escapeHtml(semantics.fitStatus)}</strong></span><span>Report mode: <strong>${escapeHtml(semantics.reportMode)}</strong></span><span>Backend reportable: <strong>${escapeHtml(semantics.usable)}</strong></span></div><ul class="warning-list">${warningRows}</ul></section>`;
 }
 
 function criticalIssueSection(result: FitResult) {
@@ -366,7 +370,7 @@ function metricsSection(result: FitResult, sessionStats: FitSessionStats) {
   const rows = metricRows(result, sessionStats)
     .map((row) => `<tr><td><code>${escapeHtml(row.parameter)}</code></td><td>${escapeHtml(row.value)}</td><td>${escapeHtml(row.explanation)}</td></tr>`)
     .join("");
-  const msg = result.fit_diagnostics?.optimizer_message ? `<p class="muted"><strong>Solver message:</strong> ${escapeHtml(result.fit_diagnostics.optimizer_message)}</p>` : "";
+  const msg = result.fit_diagnostics?.optimizer_message ? `<p class="muted"><strong>Solver message:</strong> ${escapeHtml(plainReportMessage(result.fit_diagnostics.optimizer_message))}</p>` : "";
   return `<section class="card report-section"><h2>Fit process and quality metrics</h2><table class="metrics-table"><tbody>${rows}</tbody></table>${msg}</section>`;
 }
 
