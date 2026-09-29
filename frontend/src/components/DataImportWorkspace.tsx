@@ -897,7 +897,6 @@ export function DataImportWorkspace({
           ) : null}
         </div>
       </div>
-      </div>
     </section>
   );
 }
