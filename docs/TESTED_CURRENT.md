@@ -1,52 +1,56 @@
-# Tested current package
+# Tested current state
 
-## Package
+## Product under validation
 
-IVfitter WebUI v1.9.6 verification-fix package, produced from the v1.9.5 staged package after repairing the frontend test failures that remained in the prior final zip.
+Static-browser HM-IV-Fitter four-step workflow:
 
-## Main fixes in v1.9.6
+1. Import data
+2. Model builder
+3. Fit
+4. Report
 
-- Fixed Model Builder handle normalization so the terminal handle id `node` is no longer misread as a component `n` port.
-- Restored frontend Vitest success after the v1.9.1 handle-ID changes.
-- Updated the FittingPage synthetic-trace toolbar test to assert the current Model Builder direct-shell DOM instead of the removed legacy `.model-webpage-stack` wrapper.
-- Synchronized root, frontend, and backend version metadata to v1.9.6.
-- Updated this test-status document and the final audit to reflect actual commands run in this workspace.
+The static build runs the Python/SciPy fitting core locally in Pyodide inside a Web Worker and does not require FastAPI for the user workflow.
 
-## Automated validation run in this workspace
+## Current automated gates
 
-Frontend validation from `frontend/`:
-
-```bash
-npm ci --no-audit --no-fund
-npm run test -- --run --reporter=dot
-npm run build
-```
-
-Result:
-
-- `npm ci`: passed.
-- Vitest: passed, 17 test files, 130 tests.
-- Production build: passed. Vite emitted non-blocking warnings about the `@xyflow/react` module-level `use client` directive and a large JS chunk; no build error occurred.
-
-Backend validation from `backend/`:
+The static-browser workflow is validated by CI with:
 
 ```bash
-python3 -m compileall -q ivfitter
-python3 -m pytest -q
+PYTHONPATH=backend python -m pytest backend/tests -q
+python -m compileall -q backend/ivfitter backend/tests
+npm run build:static
 ```
 
-Result:
+The workflow also performs a static artifact audit and a real Chromium/Pyodide Playwright smoke test.
 
-- Python compile: passed.
-- Backend pytest: passed, 137 collected tests, exit code 0.
+Browser coverage includes:
 
-## Manual checks still required before public release
+- generic CSV import;
+- bundled 14-trace HappyMeasure sample import;
+- invalid-model validation;
+- successful fit;
+- deliberately failed fit;
+- cancel/stop and rerun;
+- trace/model changes invalidating stale reports;
+- HTML and CSV report downloads;
+- runtime bootstrap failure UI;
+- narrow 420 px navigation;
+- browser-runtime worker abort lifecycle.
 
-These checks were not executed in this container because they require an interactive browser and/or Windows packaging environment.
+Focused frontend regression additionally covers model, Model Builder, API/browser-runtime behavior, and report export semantics.
 
-1. Launch the app in a browser and confirm there is no blank Model Builder page.
-2. Drag-connect both ends of a component: V → component p, component n → GND, then component-to-component via p/n ports.
-3. Toggle diode-like component polarity in the Inspector and confirm the REV badge, equation preview, parameter table, fit result, and HTML/SVG report export remain synchronized.
-4. Import all three canonical CSVs in `examples/demo_data/canonical/`, run fit, stop fit, rerun fit, and export HTML/CSV/JSON.
-5. Repeat the main workflow at 125%, 150%, and 200% browser zoom, plus English/Chinese language toggle.
-6. Run the Windows portable build script on a Windows machine if you need a colleague-ready `.exe` package.
+## Scientific boundary
+
+Passing the automated browser workflow proves that the product path is operational and that browser runtime contracts remain consistent with the tested core behavior. It does not, by itself, validate every model against experimental data.
+
+The next scientific validation gate is a representative real-data corpus plus explicit CPython/FastAPI vs Pyodide numerical parity tolerances.
+
+## Release/mainline decision
+
+Once the closure CI is green, the static-browser branch is suitable to become `main`. After that transition:
+
+- Pages should build from `main`;
+- obsolete desktop-era application/packaging code can be removed;
+- obsolete docs that describe desktop/Tkinter or the old Start/Data/Model/Fitting/Report/Help shell can be deleted or archived only when still historically useful.
+
+The old Windows desktop package is no longer a release acceptance criterion for the web product.
