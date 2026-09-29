@@ -1,32 +1,32 @@
-# IV-fitter Web UI MVP
+# HM-IV-Fitter
 
 Current version: **1.9.6**
 
-IV-fitter Web UI is a local-first browser app for fitting I-V traces with compact circuit models. It helps a user import voltage/current data, build a model from mathematical circuit terms, run a fit, inspect diagnostics, and export a result only after the residuals, warnings, parameters, and model structure make sense.
+HM-IV-Fitter is a local-first browser application for fitting I-V traces with compact circuit models. The primary product path is a static web build: React/Vite hosts the interface, while the existing Python/SciPy fitting core runs locally in Pyodide inside a Web Worker.
 
 ```text
-React/Vite frontend + FastAPI backend + Python fitting core
+React/Vite frontend + browser-local Pyodide/SciPy fitting core
 ```
 
-The app is a working prototype for the IV-fitter workflow. It is not yet a full replacement for the mature desktop/Tkinter workflow, and fit results should still be reviewed before reporting.
+The normal user workflow does not require a FastAPI server. The FastAPI path remains useful for development and numerical parity checks.
 
 ## What Users Do
 
-1. Open **Data** and import or paste a voltage/current trace.
-2. Confirm the selected trace and imported column units. The app converts imported values to SI V/A for preview, plots, and fitting.
-3. Open **Model** and build or review the equivalent circuit.
-4. Open **Fitting**, set the voltage range/objective, and click **Run fit**.
-5. Inspect plots, residuals, and fitted parameters.
-6. Open **Report** to review full diagnostics and export artifacts only after the fit is defensible.
+1. Open **Import data** and load or paste a voltage/current trace.
+2. Confirm trace selection, units, and import quality.
+3. Open **Model builder** and define/review the equivalent circuit.
+4. Open **Fit**, set voltage range and fit controls, then run the solver.
+5. Inspect fit curves, residuals, warnings, parameters, and bounds.
+6. Open **Report** to review diagnostics and export HTML/CSV only after the result is defensible.
 
 ## Current UI Areas
 
-- **Start:** workflow overview, current project state, and quick navigation.
-- **Data:** CSV/TXT/DAT import, publication/demo multi-trace auto-detection, pasted-data import, synthetic trace generation, dataset naming, unit selection, trace selection, import-quality summary, and spreadsheet preview.
-- **Model:** Model Builder graph canvas, equivalent-circuit controls, and model/equation preview.
-- **Fitting:** Fit setup, Run/Stop/Report controls, plots, residuals, and grouped Parameters table.
-- **Report:** report verdict, full fit process/quality diagnostics, warnings, and export actions.
-- **Help:** tutorial-style workflow guide, Function Guide, fitting logic, convergence guidance, reporting notes, and glossary.
+- **Import data:** file/sample/paste import in a narrow left rail, with trace review and data inspection in the main workspace.
+- **Model builder:** graph-native schematic editor, equivalent-circuit controls, presets, validation, and simulation.
+- **Fit:** narrow setup rail for V range, run controls, status, and Advanced settings; plots and parameters remain in the main workspace.
+- **Report:** result semantics, fit-process/quality metrics, warnings, parameters, model explanation, plots, and export actions.
+
+The production web shell is English-only. The old Start/Help pages, app-level zoom controls, language selector, and top-bar version display are no longer part of the supported UI.
 
 ## Current Workflow Details
 

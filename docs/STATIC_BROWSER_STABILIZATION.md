@@ -1,95 +1,93 @@
 # Static Browser Stabilization
 
-Branch: `fix/static-browser-stabilization`
-
-Base: `feat/static-browser-standalone`
+Branch lineage: `feat/static-browser-standalone` -> `chore/static-browser-closure`
 
 ## Goal
 
-Turn the validated static-browser prototype into a stable four-step workflow that behaves coherently under empty, loading, success, failure, cancellation, stale-result, and runtime-failure conditions.
+Promote the static-browser implementation from a prototype branch to the normal HM-IV-Fitter web product without changing fitting physics or numerical contracts.
 
-No new scientific model features are added in this branch.
-
-## UI shell decision
-
-The production web shell is intentionally minimal:
+The production web workflow is:
 
 1. Import data
 2. Model builder
 3. Fit
 4. Report
 
-The workflow navigation is centered.
+The static build runs the existing Python/SciPy fitting core in Pyodide inside a Web Worker. FastAPI remains a development/oracle path until the static-browser mainline is fully accepted.
 
-Remove from the production UI:
+## Closure status
 
-- language selector;
-- Chinese localization support;
-- app-level zoom controls;
-- top-bar version display;
-- previous Welcome/Start page;
-- previous User Manual/Help page;
-- previous vertical sidebar.
+### UI shell
 
-English is the only supported UI language in the static web application.
+- [x] Four-step navigation is centered.
+- [x] Welcome/Start and Help are removed from the production shell.
+- [x] Chinese UI/localization controls are removed from the production shell.
+- [x] App-level zoom controls are removed.
+- [x] Top-bar version display is removed.
+- [x] Narrow/mobile navigation stays inside the viewport.
+- [x] Import data uses a narrow left import rail plus a wider review workspace.
+- [x] Fit uses a narrow setup rail plus a wider analysis workspace.
+- [x] Advanced fit controls are inline in the setup rail rather than a popover.
 
-## Priority matrix
+### Workflow state integrity
 
-### P0 — UI shell cleanup
-
-- [x] Center the four-step navigation.
-- [x] Remove language selector.
-- [x] Remove Chinese production strings/localization path.
-- [x] Remove app-level zoom state and controls.
-- [x] Remove top-bar version display.
-- [ ] Keep responsive navigation usable on narrow layouts.
-
-### P0 — workflow state integrity
-
-- [x] Importing/replacing traces invalidates stale fit/report state correctly.
-- [x] Changing the selected trace invalidates stale fit/report state correctly.
-- [x] Editing the model invalidates stale fit/report state correctly.
-- [x] Fit cannot enter a misleading half-ready state when trace/model prerequisites are missing or invalid.
+- [x] Importing/replacing traces invalidates stale fit/report state.
+- [x] Changing the selected trace invalidates stale fit/report state.
+- [x] Editing the model invalidates stale fit/report state.
+- [x] Fit cannot enter a misleading ready state with missing/invalid prerequisites.
 - [x] Report has one coherent empty state before a fit exists.
-- [x] Success/warning/critical diagnostic banners only render when a real fit result exists.
-- [x] Fit failure, cancellation, and timeout states remain distinguishable.
-- [x] Navigation between Import data -> Model builder -> Fit -> Report never destroys valid current-session state.
+- [x] Success/warning/critical report content renders only for a real fit result.
+- [x] Failure, cancellation, and timeout remain distinguishable.
+- [x] Navigation preserves valid current-session data/model state.
 
-### P0 — browser runtime integrity
+### Browser runtime integrity
 
-- [x] Initial Pyodide/runtime loading has an explicit pending state.
-- [x] Runtime/bootstrap failure is surfaced as a user-actionable error.
-- [x] Aborting a fit terminates the worker and the next request recreates it cleanly.
-- [x] Stale worker responses cannot overwrite newer UI state.
-- [x] Consecutive fits cannot create ambiguous overlapping requests.
-- [ ] Non-fit aborts do not unnecessarily destroy the runtime.
+- [x] Pyodide bootstrap exposes loading/ready/error state.
+- [x] Bootstrap failure is user-visible with Retry.
+- [x] Aborting a fit terminates the worker and a later request gets a fresh worker.
+- [x] Aborting a non-fit request leaves the worker alive.
+- [x] Stale worker responses cannot replace newer state.
+- [x] Overlapping fits are prevented from producing ambiguous UI state.
 
-### P1 — real browser workflow coverage
+### Real-browser coverage
 
-- [x] Empty app state.
-- [x] Bundled HappyMeasure sample import.
-- [x] Generic CSV import.
-- [ ] Model validation failure.
-- [x] Successful ohmic fit.
-- [ ] Failed fit.
-- [x] Stop/cancel then rerun.
-- [ ] Trace/model change after a successful fit invalidates Report.
-- [ ] Report CSV/HTML export from a valid fit.
-- [x] Runtime bootstrap failure simulation.
+Playwright coverage now includes:
 
-### P1 — layout review
+- [x] empty app state;
+- [x] bundled HappyMeasure 14-trace sample import;
+- [x] generic CSV import;
+- [x] invalid-model validation;
+- [x] successful ohmic fit;
+- [x] deliberately failed fit;
+- [x] stop/cancel then rerun;
+- [x] trace change after fit invalidates Report;
+- [x] model change after fit invalidates Report;
+- [x] HTML report download;
+- [x] CSV report download;
+- [x] runtime bootstrap failure and Retry affordance;
+- [x] 420 px narrow-viewport navigation without horizontal overflow.
 
-Completed desktop Chromium screenshot review for:
+### Report semantics
 
-- Import data
-- Model builder
-- Fit
-- Report
-
-Reviewed clipping, nested scrolling, dead space, contradictory statuses, disabled-action affordances, and stale-result presentation. The final stabilization pass also verified that the visible Model Builder graph is the fit source of truth: an empty canvas disables fitting, while loading a connected preset enables it.
+- [x] UI distinguishes backend reportability from independent scientific validation.
+- [x] The label is `Backend reportable`, not `Usable as validated report`.
+- [x] Solver messages render as plain UI text rather than Markdown with backticks.
+- [x] Exported HTML uses the same wording and message sanitization.
 
 ## Scientific invariants
 
 - Keep the existing Python/SciPy fitting semantics.
-- Do not change component physics, optimizer configuration semantics, bounds semantics, residual definitions, reportability rules, or model serialization to fix UI problems.
-- CPython/FastAPI remains the numerical oracle for browser parity.
+- Do not change component physics, optimizer configuration semantics, bounds semantics, residual definitions, reportability rules, model serialization, or parameter keys to solve UI problems.
+- CPython/FastAPI remains the numerical oracle for browser parity until parity regression is promoted to the normal release gate.
+- Numerical discrepancies must be fixed at the core/runtime boundary, never hidden in presentation code.
+
+## Exit criterion
+
+This stabilization phase is complete when the closure branch passes:
+
+- focused frontend regression;
+- backend Python regression and browser-bridge tests;
+- static build and artifact audit;
+- real Chromium/Pyodide smoke workflow.
+
+After that, the static-browser code can be merged to `main`, Pages can build from `main`, and obsolete desktop-era product code/docs can be audited for removal in a separate cleanup change.

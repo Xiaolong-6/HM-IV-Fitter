@@ -123,6 +123,21 @@ describe("HTML report export", () => {
     expect(html).toContain("Signed residual");
   });
 
+  it("uses backend-reportable wording and strips inline markdown from solver messages", () => {
+    const fit = {
+      ...result(),
+      message: "Fit finished with `gtol` termination.",
+      fit_diagnostics: {
+        optimizer_message: "`gtol` termination condition is satisfied.",
+      },
+    };
+    const html = buildHtmlReportDocument({ result: fit, trace });
+    expect(html).toContain("Backend reportable");
+    expect(html).not.toContain("Usable as validated report");
+    expect(html).toContain("gtol termination condition is satisfied.");
+    expect(html).not.toContain("`gtol`");
+  });
+
   it("includes an equivalent circuit section with SVG and component names", () => {
     const html = buildHtmlReportDocument({ result: result(), trace });
     expect(html).toContain("Equivalent circuit");
