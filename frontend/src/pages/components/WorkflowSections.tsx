@@ -181,10 +181,6 @@ export function FittingWorkflowPage({
               result={result}
               language={language}
               disabled={isFitting}
-              canRecommend={canRecommendSetup}
-              recommendationBusy={recommendationBusy}
-              recommendationMessage={recommendationMessage}
-              onRecommendSetup={onRecommendSetup}
             />
           </ErrorBoundary>
         </PageSection>
@@ -198,6 +194,10 @@ export function FittingWorkflowPage({
               onModelChange={updateParameterModel}
               language={language}
               disabled={isFitting}
+              canRecommend={canRecommendSetup}
+              recommendationBusy={recommendationBusy}
+              recommendationMessage={recommendationMessage}
+              onRecommendSetup={onRecommendSetup}
             />
           </ErrorBoundary>
         </PageSection>
