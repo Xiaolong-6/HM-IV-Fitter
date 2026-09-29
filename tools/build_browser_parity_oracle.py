@@ -156,6 +156,24 @@ def summarize(request: FitRequest, *, rel_tol: float, curve_abs_A: float):
                 if key in result.metrics and result.metrics[key] is not None
             },
             "current_fit_A": result.curves.current_fit_A,
+            "warnings": sorted(
+                [
+                    {"code": warning.code, "severity": warning.severity}
+                    for warning in result.warnings
+                ],
+                key=lambda item: (item["code"], item["severity"]),
+            ),
+            "diagnostics": {
+                "solver_mode": result.fit_diagnostics.solver_mode,
+                "residual_weighting": result.fit_diagnostics.residual_weighting,
+                "loss_function": result.fit_diagnostics.loss_function,
+                "free_parameter_count": result.fit_diagnostics.free_parameter_count,
+                "fixed_parameter_count": result.fit_diagnostics.fixed_parameter_count,
+                "points_total": result.fit_diagnostics.points_total,
+                "points_in_selected_range": result.fit_diagnostics.points_in_selected_range,
+                "points_used": result.fit_diagnostics.points_used,
+                "points_excluded": result.fit_diagnostics.points_excluded,
+            },
         },
         "tolerance": {
             "relative": rel_tol,
