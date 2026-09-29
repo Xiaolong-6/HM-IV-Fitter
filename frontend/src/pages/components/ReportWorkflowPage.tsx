@@ -40,6 +40,7 @@ const REPORT_TEXT = {
   unavailable: "Unavailable",
   usableYes: "Yes",
   usableNo: "No",
+  reviewRequired: "Review required",
   noMainIssue: "No critical issue detected",
   numericalExplosion: "Numerical current explosion",
   solverFailure: "Optimizer did not produce a valid result",
@@ -71,7 +72,7 @@ const REPORT_TEXT = {
   maxFitCurrent: "Max fitted current",
   measuredScale: "Measured current scale",
   nearBoundParameters: "Near-bound parameters",
-  usableAsReport: "Usable as validated report",
+  usableAsReport: "Validated report",
   reviewDiagnostics: "Review diagnostics",
   openBounds: "Open bounds/parameters",
   saferModel: "Try safer model",
@@ -305,7 +306,7 @@ function deriveReportSemantics(result: FitResult | null, language: Language): Re
     return { fitStatus: rt(language, "invalidFit"), reportMode: rt(language, "diagnosticOnly"), mainIssue, usable: rt(language, "usableNo"), tone: "invalid", mode: "diagnostic", measuredScale, maxFitCurrent, maxResidual, nearBoundParameters };
   }
   if ((result.warnings ?? []).length) {
-    return { fitStatus: rt(language, "needsReview"), reportMode: rt(language, "reviewReport"), mainIssue: rt(language, "noMainIssue"), usable: rt(language, "usableYes"), tone: "review", mode: "review", measuredScale, maxFitCurrent, maxResidual, nearBoundParameters };
+    return { fitStatus: rt(language, "needsReview"), reportMode: rt(language, "reviewReport"), mainIssue: rt(language, "noMainIssue"), usable: rt(language, "reviewRequired"), tone: "review", mode: "review", measuredScale, maxFitCurrent, maxResidual, nearBoundParameters };
   }
   return { fitStatus: rt(language, "validFit"), reportMode: rt(language, "normalReport"), mainIssue: rt(language, "noMainIssue"), usable: rt(language, "usableYes"), tone: "valid", mode: "report", measuredScale, maxFitCurrent, maxResidual, nearBoundParameters };
 }
@@ -527,10 +528,12 @@ function ReportExportActions({
       className={`card report-section report-export-section ${diagnostic ? "diagnostic-export" : ""}`}
     >
       <div className="report-section-heading">
-        <div>
+        <div className="report-export-summary">
           <h2>{rt(language, "exports")}</h2>
           {diagnostic ? (
-            <p className="muted">{rt(language, "diagnosticExportHelp")}</p>
+            <span className="muted">{rt(language, "diagnosticExportHelp")}</span>
+          ) : reportMessage ? (
+            <span className="muted">{reportMessage}</span>
           ) : null}
         </div>
         <div className="report-actions report-export-actions-grid">
@@ -555,7 +558,6 @@ function ReportExportActions({
           </button>
         </div>
       </div>
-      {reportMessage ? <p className="muted">{reportMessage}</p> : null}
     </section>
   );
 }
