@@ -74,17 +74,20 @@ def test_css_model_builder_owns_styles_without_legacy_shell():
     root = Path(__file__).resolve().parents[2]
     style = root / "frontend" / "src" / "style.css"
     legacy_extracted = root / "frontend" / "src" / "styles" / "model-builder.css"
-    model_builder_styles = root / "frontend" / "src" / "model-builder" / "styles" / "model-builder.css"
-    model_builder_shell_styles = root / "frontend" / "src" / "model-builder" / "styles" / "shell.css"
+    legacy_model_builder_styles = root / "frontend" / "src" / "model-builder" / "styles" / "model-builder.css"
+    legacy_shell_styles = root / "frontend" / "src" / "model-builder" / "styles" / "shell.css"
+    preview_styles = root / "frontend" / "src" / "model-builder" / "styles" / "preview-canvas.css"
+    preview_canvas = root / "frontend" / "src" / "model-builder" / "preview" / "PreviewCanvas.tsx"
     assert not legacy_extracted.exists()
-    assert model_builder_styles.exists()
-    assert model_builder_shell_styles.exists()
+    assert not legacy_model_builder_styles.exists()
+    assert not legacy_shell_styles.exists()
+    assert preview_styles.exists()
     style_text = style.read_text(encoding="utf-8")
     base_text = (root / "frontend" / "src" / "styles" / "base-shell.css").read_text(encoding="utf-8")
+    preview_text = preview_canvas.read_text(encoding="utf-8")
     assert '@import "./styles/base-shell.css";' in style_text
     assert "model-builder.css" not in base_text
-    assert "@import './shell.css';" in model_builder_styles.read_text(encoding="utf-8")
-    assert ".mbv3-shell" in model_builder_shell_styles.read_text(encoding="utf-8")
+    assert 'import "../styles/preview-canvas.css";' in preview_text
 
 
 def test_duplicate_unidentifiable_component_makes_fit_non_reportable():
