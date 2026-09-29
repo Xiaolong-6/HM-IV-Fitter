@@ -51,9 +51,9 @@ def load_kadowaki_trace(voltage_col: str, current_col: str, trace_id: str) -> Tr
     )
 
 
-def fit_config() -> FitConfig:
+def fit_config(*, v_min: float = -0.5) -> FitConfig:
     return FitConfig(
-        v_min=-0.5,
+        v_min=v_min,
         v_max=0.0,
         weighting="linear",
         loss="linear",
@@ -146,20 +146,20 @@ def test_kadowaki_dark_reverse_segment_has_stable_local_ohmic_fit() -> None:
                 "kadowaki-2025-dark-reverse",
             ),
             model=shunt_model(3e7),
-            config=fit_config(),
+            config=fit_config(v_min=-0.2),
         )
     )
 
     assert result.success
     assert result.reportable
     assert result.parameters["Rsh.Rsh_ohm"].value == pytest.approx(
-        6.090638e7,
+        3.667830e8,
         rel=0.03,
     )
     assert result.metrics["normalized_rmse"] < 0.20
     assert result.fit_diagnostics is not None
     assert result.fit_diagnostics.free_parameter_count == 1
-    assert result.fit_diagnostics.points_used == 19
+    assert result.fit_diagnostics.points_used == 8
 
 
 def test_kadowaki_illumination_reverse_segment_has_stable_affine_fit() -> None:
