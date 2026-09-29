@@ -1,18 +1,19 @@
 # Release privacy checklist
 
-Before publishing a release, verify that release notes, generated manifests, logs, screenshots, and commit messages do not expose private/local context.
+Before publishing a release, verify that notes, manifests, logs, screenshots, artifacts, and commit messages do not expose private/local context.
 
 ## Block before release
 
-- Windows home paths such as `C:\Users\...`
-- Unix home paths such as `/home/...`
-- Personal email addresses that are not intentionally public project contacts
-- Local temporary folders, workstation names, or lab-user account names
-- Secrets, tokens, API keys, instrument passwords, or private network addresses
+- local home paths such as `C:\Users\...` or `/home/...`;
+- personal email addresses that are not intentional public project contacts;
+- workstation/lab account names;
+- temporary local folders;
+- private network addresses;
+- secrets, tokens, API keys, or passwords.
 
-## Required wording discipline
+## Wording discipline
 
-- State exactly which tests were run.
-- State exactly which tests were not run.
-- Do not claim frontend/build/portable validation unless the command actually passed.
-- Do not paste raw local error logs into public release notes without redaction.
+- State exactly which tests ran.
+- State exactly which tests did not run.
+- Do not claim browser, build, numerical-parity, or deployment validation unless the corresponding check passed.
+- Redact raw local error logs before putting them in public release notes.
