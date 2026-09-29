@@ -85,14 +85,15 @@ def photocurrent(*, current: float) -> ComponentSpec:
     )
 
 
-def config() -> FitConfig:
+def config(*, multistart: bool = False) -> FitConfig:
     return FitConfig(
         weighting="symmetric_log_signed",
         loss="linear",
         fit_speed="full",
         exclude_compliance=False,
         max_nfev=2000,
-        multistart_enabled=False,
+        multistart_enabled=multistart,
+        multistart_n_seeds=12,
         run_timeout_s=0,
         solver_mode="legacy_composite",
     )
@@ -124,9 +125,16 @@ def test_light_photodiode_recovers_known_generation_parameters():
         temperature_K=298.15,
         version="canonical-light-photodiode-regression",
     )
-    result = fit_trace(FitRequest(trace=load_trace("canonical_02_photodiode_light.csv"), model=model, config=config()))
+    result = fit_trace(
+        FitRequest(
+            trace=load_trace("canonical_02_photodiode_light.csv"),
+            model=model,
+            config=config(multistart=True),
+        )
+    )
 
     assert result.success
+    assert any(warning.code == "multistart" for warning in result.warnings)
     assert result.parameters["D1.I0_A"].value == pytest.approx(3e-12, rel=0.05)
     assert result.parameters["D1.n"].value == pytest.approx(1.8, rel=0.015)
     assert result.parameters["Rsh.Rsh_ohm"].value == pytest.approx(5e8, rel=0.05)
