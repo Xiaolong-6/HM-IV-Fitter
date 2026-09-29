@@ -35,11 +35,9 @@ Spreadsheet preview should show all loaded traces, not only the selected trace. 
 
 For very large datasets, prefer an explicit preview/virtualization strategy rather than rendering hidden or duplicate panes. Do not let the Import page go blank after loading data.
 
-## Default import folder
+## File selection
 
-The Import CSV/TXT action prefers `examples/demo_data/iv_traces/` as the local file picker starting folder when the runtime can control the OS file dialog. Users still manually select a file and can browse anywhere.
-
-Browser-only runtimes that cannot set a file-dialog starting directory fall back to the normal file picker. Selected files continue through the same import/parser pipeline.
+The Import CSV/TXT action uses the browser-native file picker. The browser reads the selected CSV/TXT/DAT file locally and passes its text through the same import/parser pipeline used by paste import and browser-runtime tests.
 
 ## Plain CSV/TXT formats
 
@@ -98,7 +96,7 @@ HappyMeasure voltage-source exports use `Voltage_V, Current_A`. HappyMeasure cur
 
 ## Example data organization
 
-- `examples/demo_data/iv_traces/` is for user-facing demo IV traces and is the preferred default Import CSV/TXT folder.
+- `examples/demo_data/iv_traces/` contains user-facing demo IV traces.
 - `examples/demo_data/publication_data/` is reserved for publication-derived CSV files with citation/license metadata.
 - `examples/synthetic_data/` is for generated synthetic examples.
 - `examples/parser_fixtures/` is for internal parser/dev fixtures and should not be presented as user-facing demo data.
