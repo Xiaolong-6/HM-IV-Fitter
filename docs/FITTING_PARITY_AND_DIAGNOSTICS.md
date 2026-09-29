@@ -1,23 +1,45 @@
-# Fitting parity and diagnostics plan
+# Fitting parity and diagnostics
 
-The Web backend is converging toward the mature Tkinter fitting behavior, but parity should be explicit and testable.
+## Current parity target
 
-## Implemented in 1.0.0
+The primary numerical parity target is:
 
-- Configurable residual floor for signed-log residual weighting.
-- Optional multistart fitting with seed scale factors.
-- Fit warning when multistart is used.
-- Existing implicit junction-voltage solver and compliance-like exclusion remain active.
+```text
+CPython/SciPy core <-> Pyodide/SciPy browser runtime
+```
 
-## Still required before 1.0 scientific parity
+FastAPI uses the CPython core and serves as a convenient development/oracle adapter. Browser parity must be measured against the same model/data/config contracts.
 
-- Regression datasets shared with the Tkinter implementation.
-- More complete two-stage seed refinement.
-- Parameter-bound diagnostics with near-bound thresholds.
-- Better covariance conditioning warnings.
-- Branch contribution residual diagnostics.
-- Benchmark tests for large traces and complex models.
+## Required parity dimensions
+
+For representative traces compare:
+
+- fitted parameter values;
+- success/failure state;
+- reportability state;
+- warnings;
+- fitted-current curve;
+- residual curve;
+- fit metrics;
+- optimizer diagnostics;
+- bounds-hit / identifiability signals.
+
+Tolerance must be explicit for each regression case rather than relying on string equality or a single headline metric.
+
+## Regression corpus
+
+The corpus should include:
+
+- ohmic/shunt resistance;
+- diode;
+- diode + series resistance;
+- diode + shunt resistance;
+- diode + series + shunt;
+- soft breakdown/current branches;
+- graph-native custom laws;
+- HappyMeasure real IV traces;
+- intentionally poor/non-identifiable fits.
 
 ## Interpretation policy
 
-High fit quality does not imply physical uniqueness. Reports should show warnings, parameter bounds, and whether multistart or compliance exclusion was used.
+Numerical agreement does not prove physical uniqueness. Reports must retain warnings, bounds, residuals, and model context so users can judge whether the selected model is scientifically defensible.
