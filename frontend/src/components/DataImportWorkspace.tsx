@@ -546,34 +546,34 @@ export function DataImportWorkspace({
             : "data-import-layout webpage-data-layout no-data"
         }
       >
-        {showImportControls ? (
-          <section className="card import-actions-card data-source-card webpage-panel">
-            <div className="card-head">
-              <h3>{"Import data"}</h3>
-              <HelpTip text={t(language, "importCsvHelp")} />
-              {hasData && importExpanded ? (
-                <button
-                  type="button"
-                  className="ghost small"
-                  onClick={() => setImportExpanded(false)}
-                >
-                  {"Collapse"}
-                </button>
-              ) : null}
-            </div>
+        <aside className="data-import-sidebar">
+          {showImportControls ? (
+            <section className="card import-actions-card data-source-card webpage-panel">
+              <div className="card-head">
+                <h3>Import data</h3>
+                <HelpTip text={t(language, "importCsvHelp")} />
+                {hasData && importExpanded ? (
+                  <button
+                    type="button"
+                    className="ghost small"
+                    onClick={() => setImportExpanded(false)}
+                  >
+                    Collapse
+                  </button>
+                ) : null}
+              </div>
 
-            <>
               <div
                 className="data-source-tabs"
                 role="tablist"
-                aria-label={"Data source"}
+                aria-label="Data source"
               >
                 <button
                   type="button"
                   className={inputMode === "upload" ? "active" : ""}
                   onClick={() => setInputMode("upload")}
                 >
-                  {"Upload CSV/TXT"}
+                  Upload CSV/TXT
                 </button>
                 <button
                   type="button"
@@ -587,9 +587,10 @@ export function DataImportWorkspace({
                   className={inputMode === "sample" ? "active" : ""}
                   onClick={() => setInputMode("sample")}
                 >
-                  {"Sample data"}
+                  Sample data
                 </button>
               </div>
+
               {inputMode === "upload" ? (
                 <div
                   className={`drop-import-zone${dragActive ? " drag-active" : ""}`}
@@ -615,11 +616,10 @@ export function DataImportWorkspace({
                       e.target.files?.[0] && loadFile(e.target.files[0])
                     }
                   />
-                  <span>
-                    {"Or drag a CSV/TXT/DAT file here."}
-                  </span>
+                  <span>Or drag a CSV/TXT/DAT file here.</span>
                 </div>
               ) : null}
+
               {inputMode === "paste" ? (
                 <div className="inline-paste-panel">
                   <textarea
@@ -638,264 +638,265 @@ export function DataImportWorkspace({
                   </button>
                 </div>
               ) : null}
+
               {inputMode === "sample" ? (
                 <div className="sample-import-panel">
                   <p className="muted">
-                    {"Load the bundled sample dataset for practicing trace selection and fitting workflow."}
+                    Load the bundled sample dataset for practicing trace selection
+                    and fitting workflow.
                   </p>
                   <button
                     className="import-debug-action"
                     title={t(language, "loadDemoHelp")}
                     onClick={loadSampleData}
                   >
-                    {"Load sample data"}
+                    Load sample data
                   </button>
                 </div>
               ) : null}
-            </>
-          </section>
-        ) : (
-          <section
-            className="import-loaded-bar webpage-panel"
-            aria-label={"Import summary"}
-          >
-            <div className="import-sidebar-title">Import data</div>
-            <div className="import-loaded-summary">
-              <span className="import-status-pill">
-                {"Loaded"}
-              </span>
-              <strong>
-                {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${totalPoints} points`}
-              </strong>
-              <span className="muted">
-                {selectedSource
-                  ? `${"Source"}: ${selectedSource}`
-                  : ""}
-              </span>
-            </div>
-            <div className="import-loaded-actions">
-              <button
-                type="button"
-                className="ghost small"
-                onClick={reopenImportOptions}
-              >
-                {"Reopen import"}
-              </button>
-              <button
-                type="button"
-                className="ghost small"
-                onClick={addMoreFile}
-              >
-                {"Add more"}
-              </button>
-            </div>
-            <input
-              ref={fileInputRef}
-              id={fileId}
-              className="visually-hidden"
-              type="file"
-              accept=".csv,.txt,.dat"
-              onChange={(e) =>
-                e.target.files?.[0] && loadFile(e.target.files[0])
-              }
-            />
-          </section>
-        )}
-
-        {hasData ? (
-          <section className="card trace-selection-card webpage-panel compact-trace-selection-card trace-control-card">
-            <div className="trace-control-row">
-              <label className="trace-select-label structured-trace-select">
-                <span>{"Trace"}</span>
-                <select
-                  title={t(language, "selectedTraceHelp")}
-                  value={selected?.trace_id ?? ""}
-                  onChange={(e) => onSelectTrace(e.target.value)}
+            </section>
+          ) : (
+            <section
+              className="import-loaded-bar webpage-panel"
+              aria-label="Import summary"
+            >
+              <div className="import-sidebar-title">Import data</div>
+              <div className="import-loaded-summary">
+                <span className="import-status-pill">Loaded</span>
+                <strong>
+                  {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${totalPoints} points`}
+                </strong>
+                <span className="muted">
+                  {selectedSource ? `Source: ${selectedSource}` : ""}
+                </span>
+              </div>
+              <div className="import-loaded-actions">
+                <button
+                  type="button"
+                  className="ghost small"
+                  onClick={reopenImportOptions}
                 >
-                  {traces.map((tr) => (
-                    <option key={tr.trace_id} value={tr.trace_id}>
-                      {tr.trace_id}
+                  Reopen import
+                </button>
+                <button
+                  type="button"
+                  className="ghost small"
+                  onClick={addMoreFile}
+                >
+                  Add more
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                id={fileId}
+                className="visually-hidden"
+                type="file"
+                accept=".csv,.txt,.dat"
+                onChange={(e) =>
+                  e.target.files?.[0] && loadFile(e.target.files[0])
+                }
+              />
+            </section>
+          )}
+        </aside>
+
+        <div className="data-review-column">
+          {hasData ? (
+            <section className="card trace-selection-card webpage-panel compact-trace-selection-card trace-control-card">
+              <div className="trace-control-row">
+                <label className="trace-select-label structured-trace-select">
+                  <span>Trace</span>
+                  <select
+                    title={t(language, "selectedTraceHelp")}
+                    value={selected?.trace_id ?? ""}
+                    onChange={(e) => onSelectTrace(e.target.value)}
+                  >
+                    {traces.map((tr) => (
+                      <option key={tr.trace_id} value={tr.trace_id}>
+                        {tr.trace_id}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="trace-name-inline">
+                  <span>Name</span>
+                  <DatasetNameInput
+                    value={selected?.trace_id ?? ""}
+                    language={language}
+                    onCommit={renameSelected}
+                  />
+                </label>
+                <div className="unit-inline-group" title={unitHelp}>
+                  <span>Units</span>
+                  <div className="unit-control-fields">
+                    <select
+                      aria-label="Voltage unit"
+                      value={voltageUnit}
+                      onChange={(e) => changeUnit("voltage", e.target.value)}
+                    >
+                      {voltageUnits.map((unit) => (
+                        <option key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Current unit"
+                      value={currentUnit}
+                      onChange={(e) => changeUnit("current", e.target.value)}
+                    >
+                      {currentUnits.map((unit) => (
+                        <option key={unit.value} value={unit.value}>
+                          {unit.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <span className="trace-count-pill compact-data-pill">
+                  {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${selectedPoints} points`}
+                </span>
+                {onNextToFitting ? (
+                  <button
+                    type="button"
+                    className="primary data-next-action compact-next-action"
+                    onClick={onNextToFitting}
+                  >
+                    Model Builder →
+                  </button>
+                ) : null}
+              </div>
+            </section>
+          ) : (
+            <section className="card data-review-empty-panel webpage-panel">
+              <div className="empty-data-invite">
+                <strong>Data review</strong>
+                <span>
+                  Imported traces, plot review, and the spreadsheet preview will
+                  appear here.
+                </span>
+              </div>
+            </section>
+          )}
+
+          {hasData ? (
+            <section className="card plot-review-card webpage-panel">
+              <div className="card-head">
+                <h3>Plot review</h3>
+                <HelpTip text="Quickly inspect the selected trace before fitting." />
+              </div>
+              <TracePlotReview trace={selected} language={language} />
+            </section>
+          ) : null}
+
+          {hasData ? (
+            <section className="card spreadsheet-card webpage-panel import-spreadsheet-card">
+              <div className="card-head spreadsheet-head">
+                <h3>{t(language, "dataPreview")}</h3>
+                <HelpTip text={t(language, "dataPreviewHelp")} />
+              </div>
+              <div className="spreadsheet-toolbar">
+                <select
+                  aria-label="Jump to trace group"
+                  defaultValue=""
+                  onChange={(event) => {
+                    if (event.target.value) jumpToPreviewTrace(event.target.value);
+                    event.currentTarget.value = "";
+                  }}
+                >
+                  <option value="">Jump to trace…</option>
+                  {traces.map((trace) => (
+                    <option key={trace.trace_id} value={trace.trace_id}>
+                      {trace.trace_id}
                     </option>
                   ))}
                 </select>
-              </label>
-              <label className="trace-name-inline">
-                <span>{"Name"}</span>
-                <DatasetNameInput
-                  value={selected?.trace_id ?? ""}
-                  language={language}
-                  onCommit={renameSelected}
+                <input
+                  value={previewSearch}
+                  onChange={(event) => setPreviewSearch(event.target.value)}
+                  placeholder="Search row / trace"
                 />
-              </label>
-              <div className="unit-inline-group" title={unitHelp}>
-                <span>{"Units"}</span>
-                <div className="unit-control-fields">
-                  <select
-                    aria-label={"Voltage unit"}
-                    value={voltageUnit}
-                    onChange={(e) => changeUnit("voltage", e.target.value)}
-                  >
-                    {voltageUnits.map((unit) => (
-                      <option key={unit.value} value={unit.value}>
-                        {unit.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label={"Current unit"}
-                    value={currentUnit}
-                    onChange={(e) => changeUnit("current", e.target.value)}
-                  >
-                    {currentUnits.map((unit) => (
-                      <option key={unit.value} value={unit.value}>
-                        {unit.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <span className="trace-count-pill compact-data-pill">
-                {`${traces.length} ${traces.length === 1 ? "trace" : "traces"} · ${selectedPoints} points`}
-              </span>
-              {onNextToFitting ? (
                 <button
                   type="button"
-                  className="primary data-next-action compact-next-action"
-                  onClick={onNextToFitting}
+                  className="ghost small"
+                  onClick={copyVisiblePreview}
                 >
-                  {"Model Builder →"}
+                  Copy visible
                 </button>
-              ) : null}
-            </div>
-          </section>
-        ) : null}
-
-        {hasData ? (
-          <section className="card plot-review-card webpage-panel">
-            <div className="card-head">
-              <h3>{"Plot review"}</h3>
-              <HelpTip
-                text={
-                  "Quickly inspect the selected trace before fitting."
-                }
-              />
-            </div>
-            <TracePlotReview trace={selected} language={language} />
-          </section>
-        ) : null}
-
-        {hasData ? (
-          <section className="card spreadsheet-card webpage-panel import-spreadsheet-card">
-            <div className="card-head spreadsheet-head">
-              <h3>{t(language, "dataPreview")}</h3>
-              <HelpTip text={t(language, "dataPreviewHelp")} />
-            </div>
-            <div className="spreadsheet-toolbar">
-              <select
-                aria-label={"Jump to trace group"}
-                defaultValue=""
-                onChange={(event) => {
-                  if (event.target.value) jumpToPreviewTrace(event.target.value);
-                  event.currentTarget.value = "";
-                }}
+                <button
+                  type="button"
+                  className="ghost small"
+                  onClick={exportVisiblePreview}
+                >
+                  Export CSV
+                </button>
+              </div>
+              <div
+                className="spreadsheet-wrap"
+                role="region"
+                aria-label={t(language, "dataPreview")}
               >
-                <option value="">
-                  {"Jump to trace…"}
-                </option>
-                {traces.map((trace) => (
-                  <option key={trace.trace_id} value={trace.trace_id}>
-                    {trace.trace_id}
-                  </option>
-                ))}
-              </select>
-              <input
-                value={previewSearch}
-                onChange={(event) => setPreviewSearch(event.target.value)}
-                placeholder={
-                  "Search row / trace"
-                }
-              />
-              <button
-                type="button"
-                className="ghost small"
-                onClick={copyVisiblePreview}
-              >
-                {"Copy visible"}
-              </button>
-              <button
-                type="button"
-                className="ghost small"
-                onClick={exportVisiblePreview}
-              >
-                {"Export CSV"}
-              </button>
-            </div>
-            <div
-              className="spreadsheet-wrap"
-              role="region"
-              aria-label={t(language, "dataPreview")}
-            >
-              <table className="data-spreadsheet all-traces-spreadsheet horizontal-trace-spreadsheet">
-                <thead>
-                  <tr>
-                    <th className="row-index-header" rowSpan={2}>#</th>
-                    {previewTraceGroups.map((group) => (
-                      <th
-                        id={traceGroupElementId(group.trace.trace_id)}
-                        key={group.trace.trace_id}
-                        className={
-                          group.selected
-                            ? "trace-column-group selected-trace-group"
-                            : "trace-column-group"
-                        }
-                        colSpan={2}
-                        title={group.trace.trace_id}
-                      >
-                        <span>{group.trace.trace_id}</span>
-                        <small>
-                          {group.pointCount} {"points"}
-                        </small>
-                      </th>
-                    ))}
-                  </tr>
-                  <tr>
-                    {previewTraceGroups.map((group) => (
-                      <Fragment key={`${group.trace.trace_id}-units`}>
-                        <th className={group.selected ? "selected-trace-col" : ""}>
-                          V (V)
+                <table className="data-spreadsheet all-traces-spreadsheet horizontal-trace-spreadsheet">
+                  <thead>
+                    <tr>
+                      <th className="row-index-header" rowSpan={2}>#</th>
+                      {previewTraceGroups.map((group) => (
+                        <th
+                          id={traceGroupElementId(group.trace.trace_id)}
+                          key={group.trace.trace_id}
+                          className={
+                            group.selected
+                              ? "trace-column-group selected-trace-group"
+                              : "trace-column-group"
+                          }
+                          colSpan={2}
+                          title={group.trace.trace_id}
+                        >
+                          <span>{group.trace.trace_id}</span>
+                          <small>{group.pointCount} points</small>
                         </th>
-                        <th className={group.selected ? "selected-trace-col" : ""}>
-                          I (A)
-                        </th>
-                      </Fragment>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {previewRows.map((row) => (
-                    <tr key={row.idx}>
-                      <td className="row-index-cell">{row.idx + 1}</td>
-                      {previewTraceGroups.map((group) => {
-                        const v = group.trace.voltage_V[row.idx];
-                        const i = group.trace.current_A[row.idx];
-                        return (
-                          <Fragment key={`${group.trace.trace_id}-${row.idx}`}>
-                            <td className={group.selected ? "selected-trace-col" : ""}>
-                              {Number.isFinite(v) ? formatCell(v) : ""}
-                            </td>
-                            <td className={group.selected ? "selected-trace-col" : ""}>
-                              {Number.isFinite(i) ? formatCell(i) : ""}
-                            </td>
-                          </Fragment>
-                        );
-                      })}
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        ) : null}
+                    <tr>
+                      {previewTraceGroups.map((group) => (
+                        <Fragment key={`${group.trace.trace_id}-units`}>
+                          <th className={group.selected ? "selected-trace-col" : ""}>
+                            V (V)
+                          </th>
+                          <th className={group.selected ? "selected-trace-col" : ""}>
+                            I (A)
+                          </th>
+                        </Fragment>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {previewRows.map((row) => (
+                      <tr key={row.idx}>
+                        <td className="row-index-cell">{row.idx + 1}</td>
+                        {previewTraceGroups.map((group) => {
+                          const v = group.trace.voltage_V[row.idx];
+                          const i = group.trace.current_A[row.idx];
+                          return (
+                            <Fragment key={`${group.trace.trace_id}-${row.idx}`}>
+                              <td className={group.selected ? "selected-trace-col" : ""}>
+                                {Number.isFinite(v) ? formatCell(v) : ""}
+                              </td>
+                              <td className={group.selected ? "selected-trace-col" : ""}>
+                                {Number.isFinite(i) ? formatCell(i) : ""}
+                              </td>
+                            </Fragment>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          ) : null}
+        </div>
+      </div>
       </div>
     </section>
   );
