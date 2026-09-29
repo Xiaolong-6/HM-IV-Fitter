@@ -181,21 +181,21 @@ function metricDisplayName(key: string, _language: Language) {
 function metricExplanation(key: string, _language: Language) {
   const help: Record<string, string> = {
     linear_rmse_A:
-      "Root-mean-square current error. Smaller is better; it is dominated by high-current regions.",
+      "Root-mean-square current error over the points actually used for fitting. Smaller is better; it is dominated by high-current regions.",
     normalized_rmse:
-      "RMSE normalized by measured-current scale. Useful for comparing traces with different current levels.",
+      "Fit-range RMSE normalized by the measured-current scale of the points actually used. Useful for comparing traces with different current levels.",
     linear_r2:
-      "Linear-space R². High values indicate good large-current agreement but may hide low-current decade errors.",
+      "Linear-space R² over the points actually used for fitting. High values indicate good large-current agreement but may hide low-current decade errors.",
     log_magnitude_r2:
-      "R² of log10(|I|). More sensitive to multi-decade IV behavior.",
+      "R² of log10(|I|) over the points actually used for fitting. More sensitive to multi-decade IV behavior.",
     log_magnitude_mae_decades:
-      "Mean absolute error in log-current decades; 0.3 decade is roughly a factor of two.",
+      "Mean absolute error in log-current decades over the points actually used for fitting; 0.3 decade is roughly a factor of two.",
     reduced_chi_square:
       "Weighted reduced χ²-like diagnostic. Interpret relatively unless weights are measured uncertainties.",
     weighted_chi_square:
       "Sum of squared weighted residuals for the selected weighting and voltage range.",
     max_abs_residual_A:
-      "Largest absolute current residual; useful for localized outliers or model-failure regions.",
+      "Largest absolute current residual among the points actually used for fitting; useful for localized outliers or model-failure regions.",
   };
   return (
     help[key] ??
