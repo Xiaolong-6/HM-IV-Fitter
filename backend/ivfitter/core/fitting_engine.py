@@ -95,6 +95,26 @@ _residual = weighted_residual
 _multistart_candidates = multistart_candidates
 
 
+def _optimizer_residual_scale(y_meas, weighting: str, floor_A: float) -> float:
+    """Return a constant objective scale without changing the least-squares optimum.
+
+    Raw linear residuals are measured in amperes. For nA/uA datasets their
+    Jacobian-gradient products can fall below SciPy's default gtol before the
+    optimizer takes a meaningful step. Dividing the entire residual vector by
+    one fixed data scale preserves the minimizer while making stopping tests
+    numerically meaningful. Signed-log residuals are already dimensionless.
+    """
+    if weighting != "linear":
+        return 1.0
+    arr = np.asarray(y_meas, dtype=float)
+    finite = arr[np.isfinite(arr)]
+    floor = max(float(floor_A), 1e-30)
+    if finite.size == 0:
+        return floor
+    rms = float(np.sqrt(np.mean(finite * finite)))
+    if not np.isfinite(rms):
+        return floor
+    return max(rms, floor)
 
 
 def _log_transform_enabled(key: str, comp, name: str, spec, value: float, lower: float, upper: float) -> bool:
@@ -457,6 +477,11 @@ def fit_trace(request: FitRequest) -> FitResult:
     optimizer_njev_total = 0
     optimizer_steps = None
     active_bounds: list[str] = []
+    optimizer_residual_scale = _optimizer_residual_scale(
+        i_meas[use],
+        request.config.weighting,
+        request.config.residual_floor_A,
+    )
     if len(x0) > 0 and len(v_fit[use]) >= 3:
         def fun(x):
             check_timeout()
@@ -466,6 +491,7 @@ def fit_trace(request: FitRequest) -> FitResult:
             if not np.all(np.isfinite(pred)):
                 return np.full_like(i_meas[use], sentinel, dtype=float)
             res_vec = weighted_residual(pred, i_meas[use], request.config.weighting, request.config.residual_floor_A)
+            res_vec = res_vec / optimizer_residual_scale
             return np.nan_to_num(res_vec, nan=sentinel, posinf=sentinel, neginf=-sentinel)
         try:
             starts = [x0]
