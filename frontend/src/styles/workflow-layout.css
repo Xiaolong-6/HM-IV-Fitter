@@ -961,3 +961,34 @@ button.running { cursor: progress; opacity: 0.85; }
   .unified-parameter-table { min-width: 480px; }
   .unified-parameter-table .param-col-name { min-width: 90px; }
 }
+
+
+/* Compact, explicit data-driven setup recommendation. */
+.parameter-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.parameter-card-header h2 {
+  margin: 0;
+}
+.parameter-recommend-button {
+  flex: 0 0 auto;
+  padding: 5px 10px;
+  min-height: 30px;
+  font-size: calc(12px * var(--app-zoom));
+  white-space: nowrap;
+}
+.parameter-recommendation-note {
+  margin: 4px 0 6px;
+  color: #64748b;
+  font-size: calc(12px * var(--app-zoom));
+  line-height: 1.35;
+}
+@media (max-width: 640px) {
+  .parameter-card-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+}
