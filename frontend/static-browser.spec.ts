@@ -471,9 +471,12 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await expect(page.getByText(/Backend reportable:/)).toBeVisible();
+  await expect(page.getByText("Usable as validated report", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/`gtol`/)).toHaveCount(0);
   const reportDiagnostics = page.locator(".report-diagnostic-summary-line");
   if (await page.getByText("Needs review", { exact: true }).count()) {
-    await expect(reportDiagnostics).toContainText("Validated report:");
+    await expect(reportDiagnostics).toContainText("Backend reportable:");
     await expect(reportDiagnostics).toContainText("Review required");
   }
   await page.screenshot({
