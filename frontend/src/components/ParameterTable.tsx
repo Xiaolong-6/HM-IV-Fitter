@@ -3,7 +3,6 @@ import type {
   ComponentSpec,
   FitResult,
   FunctionDefinition,
-  Location,
   ModelSpec,
   ParameterSpec,
 } from "../model/types";
