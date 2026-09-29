@@ -254,3 +254,159 @@ describe("Model Builder default recognition", () => {
     expect(model.graph?.components[0].params.R.value).toBe(777);
   });
 });
+
+
+function graphBackedResistanceModel(
+  value = 10,
+  lower = 1e-12,
+  upper = 1e9,
+): ModelSpec {
+  return {
+    core: [],
+    series: [{
+      id: "R1",
+      location: "series",
+      function_type: "constant_rs",
+      law_id: "ohmic",
+      evaluation_form: "voltage_drop",
+      placement: "series_voltage_drop",
+      params: {
+        Rs_ohm: {
+          value,
+          lower,
+          upper,
+          unit: "ohm",
+          fit: true,
+          label: "R",
+        },
+      },
+      metadata: {
+        nickname: "R1",
+        templateKey: "resistance",
+      },
+    }],
+    parallel: [],
+    graph: {
+      terminals: ["V"],
+      reference_node: "GND",
+      nodes: [
+        { id: "V", role: "terminal" },
+        { id: "GND", role: "reference" },
+      ],
+      components: [{
+        id: "R1",
+        function_type: "custom",
+        law_id: "custom_expression",
+        evaluation_form: "voltage_drop",
+        placement: "series_voltage_drop",
+        node_pos: "V",
+        node_neg: "GND",
+        params: {
+          R: {
+            value,
+            lower,
+            upper,
+            unit: "ohm",
+            fit: true,
+            label: "R",
+          },
+        },
+        metadata: {
+          templateKey: "resistance",
+          behavior: "R_of_V",
+          expression: "R",
+        },
+      }],
+      assembly_notes: [],
+      schema_version: "model_builder",
+    },
+    temperature_K: 300,
+    version: "graph-test",
+  };
+}
+
+const resistanceRegistry: FunctionDefinition[] = [{
+  function_type: "constant_rs",
+  location: "series",
+  display_name: "Resistance",
+  role: "series",
+  law_id: "ohmic",
+  law_name: "Ohmic",
+  canonical_equation: "V=IR",
+  available_forms: ["voltage_drop"],
+  default_form: "voltage_drop",
+  allowed_placements: ["series_voltage_drop"],
+  default_placement: "series_voltage_drop",
+  allowed_polarities: ["forward"],
+  default_polarity: "forward",
+  parameters: [{
+    name: "Rs_ohm",
+    default: 10,
+    lower: 0,
+    upper: 1e12,
+    unit: "ohm",
+    fit: true,
+    description: "",
+  }],
+  equation_template: "",
+  help_text: "",
+}];
+
+const resistanceSuggestion: BoundsSuggestionResponse = {
+  status: "ok",
+  notes: [],
+  suggestions: {
+    "R1.Rs_ohm": {
+      component_id: "R1",
+      param_name: "Rs_ohm",
+      lower: 1,
+      upper: 1e6,
+      initial: 100,
+      source: "data_suggested",
+      reason: "high-current dV/dI",
+    },
+  },
+};
+
+describe("Model Builder default recommendation policy", () => {
+  it("allows recommendations to replace untouched system-template defaults", () => {
+    const { model, report } = applyDataFitSuggestions(
+      graphBackedResistanceModel(),
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(1);
+    expect(report.initials.applied).toBe(1);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 100,
+      lower: 1,
+      upper: 1e6,
+    });
+    expect(model.graph?.components[0].params.R).toMatchObject({
+      value: 100,
+      lower: 1,
+      upper: 1e6,
+    });
+  });
+
+  it("protects Model Builder values that differ from the system template", () => {
+    const source = graphBackedResistanceModel(777, 2, 5e8);
+    const { model, report } = applyDataFitSuggestions(
+      source,
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(0);
+    expect(report.initials.applied).toBe(0);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 777,
+      lower: 2,
+      upper: 5e8,
+    });
+    expect(model.graph?.components[0].params.R).toMatchObject({
+      value: 777,
+      lower: 2,
+      upper: 5e8,
+    });
+  });
+});
