@@ -205,6 +205,43 @@ function shouldApplyInitial(
   return source === "data_suggested" || isDefaultInitial(spec, registryDefault);
 }
 
+function constrainedSuggestedBounds(
+  suggestion: ParameterBoundsSuggestion,
+  defaultSpec: RecommendationDefault | undefined,
+) {
+  let lower = suggestion.lower ?? null;
+  let upper = suggestion.upper ?? null;
+
+  if (defaultSpec?.lower != null) {
+    lower = lower == null ? defaultSpec.lower : Math.max(lower, defaultSpec.lower);
+  }
+  if (defaultSpec?.upper != null) {
+    upper = upper == null ? defaultSpec.upper : Math.min(upper, defaultSpec.upper);
+  }
+  if (lower != null && upper != null && lower > upper) {
+    return null;
+  }
+  return { lower, upper };
+}
+
+function initialIsProtected(
+  spec: ParameterSpec,
+  defaultSpec: RecommendationDefault | undefined,
+  source: ParameterSource | null,
+) {
+  if (source === "user_edited" || source === "fit_derived_initial") return true;
+  if (source === "data_suggested") return false;
+  return !isDefaultInitial(spec, defaultSpec);
+}
+
+function boundsContainValue(
+  lower: number | null,
+  upper: number | null,
+  value: number,
+) {
+  return (lower == null || value >= lower) && (upper == null || value <= upper);
+}
+
 function skipReason(spec: ParameterSpec, registryDefault: { lower?: number | null; upper?: number | null } | undefined, source: ParameterSource | null) {
   if (source === "user_edited") return "Bounds were user-edited, so automatic suggestions did not overwrite them.";
   if (!isDefaultBounds(spec, registryDefault)) return "Current bounds are not registry defaults and were not previous data suggestions.";
@@ -231,8 +268,25 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
           comp.function_type,
           name,
         );
+        const constrained = constrainedSuggestedBounds(suggestion, reg);
+        const initialSource = parameterSource(model, comp.id, name, "initial");
+        const protectedInitial = initialIsProtected(spec, reg, initialSource);
 
+        let policySkipReason: string | null = null;
         if (!shouldApplyBounds(spec, reg, boundSource)) {
+          policySkipReason = skipReason(spec, reg, boundSource);
+        } else if (!constrained) {
+          policySkipReason =
+            "Suggested bounds are incompatible with the model's allowed parameter range.";
+        } else if (
+          protectedInitial &&
+          !boundsContainValue(constrained.lower, constrained.upper, spec.value)
+        ) {
+          policySkipReason =
+            "Suggested bounds would exclude a protected initial value, so the current bounds were preserved.";
+        }
+
+        if (policySkipReason || !constrained) {
           skipped += 1;
           details.push({
             key,
@@ -245,7 +299,7 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
             suggestedUpper: suggestion.upper ?? null,
             source: boundSource ?? "none",
             reason: suggestion.reason,
-            skipReason: skipReason(spec, reg, boundSource),
+            skipReason: policySkipReason ?? "Recommendation could not be applied safely.",
           });
           continue;
         }
@@ -258,16 +312,16 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
           action: "applied",
           previousLower: spec.lower ?? null,
           previousUpper: spec.upper ?? null,
-          currentLower: suggestion.lower ?? null,
-          currentUpper: suggestion.upper ?? null,
+          currentLower: constrained.lower,
+          currentUpper: constrained.upper,
           suggestedLower: suggestion.lower ?? null,
           suggestedUpper: suggestion.upper ?? null,
           source: boundSource ?? "registry_default",
           reason: suggestion.reason,
         });
         next = updateModelParameterSpec(next, location, comp.id, name, {
-          lower: suggestion.lower ?? null,
-          upper: suggestion.upper ?? null,
+          lower: constrained.lower,
+          upper: constrained.upper,
         });
         next = setParamSource(next, comp.id, name, {
           bounds: "data_suggested",
@@ -317,8 +371,14 @@ export function applyDataInitialSuggestions(
           continue;
         }
 
+        const lower = spec.lower ?? null;
+        const upper = spec.upper ?? null;
+        const safeInitial = Math.min(
+          upper ?? Number.POSITIVE_INFINITY,
+          Math.max(lower ?? Number.NEGATIVE_INFINITY, suggestion.initial),
+        );
         next = updateModelParameterSpec(next, location, comp.id, name, {
-          value: suggestion.initial,
+          value: safeInitial,
         });
         next = setParamSource(next, comp.id, name, {
           initial: "data_suggested",
