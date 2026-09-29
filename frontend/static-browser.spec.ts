@@ -634,6 +634,21 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await expect(page.locator(".fitting-page-two-column")).toBeVisible();
 
   const fitSidebar = page.locator(".fit-setup-sidebar");
+  const resistanceRow = page.locator(".param-data-row").filter({ hasText: "R1.R" });
+  const resistanceInitial = resistanceRow.locator(".param-col-initial input");
+  await expect(resistanceInitial).toBeVisible();
+  await resistanceInitial.fill("777");
+  await resistanceInitial.press("Enter");
+
+  const recommendSetup = page.getByRole("button", { name: "Recommend setup" });
+  await expect(recommendSetup).toBeEnabled();
+  await recommendSetup.click();
+  await expect(page.getByText(/Recommended setup applied/)).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.getByText(/protected field\(s\) preserved/)).toBeVisible();
+  await expect(resistanceInitial).toHaveValue("777");
+
   await fitSidebar.getByLabel("Assembly/solver mode").selectOption("graph_dc");
   const timeoutInput = fitSidebar.getByLabel("Run timeout (s)");
   await timeoutInput.fill("20");
