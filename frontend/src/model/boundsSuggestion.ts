@@ -32,6 +32,68 @@ function registryParam(registry: FunctionDefinition[], functionType: string, par
   return registry.find((definition) => definition.function_type === functionType)?.parameters.find((param) => param.name === paramName);
 }
 
+type RecommendationDefault = {
+  default?: number | null;
+  lower?: number | null;
+  upper?: number | null;
+};
+
+function modelBuilderTemplateDefault(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+): RecommendationDefault | undefined {
+  const graphComponent = model.graph?.components.find(
+    (component) => component.id === componentId,
+  );
+  if (!graphComponent) return undefined;
+
+  const graphName = graphParameterNameForLegacyParameter(
+    model,
+    componentId,
+    paramName,
+  );
+  if (!graphName) return undefined;
+
+  const templateKey =
+    typeof graphComponent.metadata?.templateKey === "string"
+      ? graphComponent.metadata.templateKey
+      : null;
+  if (!templateKey) return undefined;
+
+  const template = DEFAULT_COMPONENT_TEMPLATES.find(
+    (candidate) => candidate.key === templateKey,
+  );
+  if (!template) return undefined;
+
+  let parameter = template.parameters.find(
+    (candidate) => candidate.symbol === graphName,
+  );
+  if (!parameter && templateKey === "resistance" && template.parameters.length === 1) {
+    parameter = template.parameters[0];
+  }
+  if (!parameter) return undefined;
+
+  return {
+    default: parameter.value,
+    lower: parameter.lower ?? null,
+    upper: parameter.upper ?? null,
+  };
+}
+
+function recommendationDefault(
+  model: ModelSpec,
+  registry: FunctionDefinition[],
+  componentId: string,
+  functionType: string,
+  paramName: string,
+): RecommendationDefault | undefined {
+  return (
+    modelBuilderTemplateDefault(model, componentId, paramName) ??
+    registryParam(registry, functionType, paramName)
+  );
+}
+
 function sameNumber(a: number | null | undefined, b: number | null | undefined) {
   const aa = a ?? null;
   const bb = b ?? null;
@@ -162,7 +224,13 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
         const suggestion: ParameterBoundsSuggestion | undefined = response.suggestions[key];
         if (!suggestion) continue;
         const boundSource = parameterSource(model, comp.id, name, "bounds");
-        const reg = registryParam(registry, comp.function_type, name);
+        const reg = recommendationDefault(
+          model,
+          registry,
+          comp.id,
+          comp.function_type,
+          name,
+        );
 
         if (!shouldApplyBounds(spec, reg, boundSource)) {
           skipped += 1;
@@ -237,7 +305,13 @@ export function applyDataInitialSuggestions(
           continue;
         }
         const source = parameterSource(model, comp.id, name, "initial");
-        const reg = registryParam(registry, comp.function_type, name);
+        const reg = recommendationDefault(
+          model,
+          registry,
+          comp.id,
+          comp.function_type,
+          name,
+        );
         if (!shouldApplyInitial(spec, reg, source)) {
           skippedKeys.push(key);
           continue;
