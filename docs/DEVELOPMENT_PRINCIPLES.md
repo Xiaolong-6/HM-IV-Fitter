@@ -50,4 +50,4 @@ Browser-runtime changes need worker lifecycle plus real Chromium/Pyodide coverag
 
 ## Documentation discipline
 
-Current docs describe the four-step static web product. Historical documents stay under `docs/archive/` or `docs/history/`; do not copy retired desktop/portable guidance into active docs.
+Current docs describe the four-step static web product. Historical documents stay under `docs/archive/` or `docs/history/` and are not implementation guidance.
