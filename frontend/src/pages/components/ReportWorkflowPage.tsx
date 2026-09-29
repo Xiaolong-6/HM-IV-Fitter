@@ -71,7 +71,7 @@ const REPORT_TEXT = {
   maxFitCurrent: "Max fitted current",
   measuredScale: "Measured current scale",
   nearBoundParameters: "Near-bound parameters",
-  usableAsReport: "Usable as validated report",
+  usableAsReport: "Backend reportable",
   reviewDiagnostics: "Review diagnostics",
   openBounds: "Open bounds/parameters",
   saferModel: "Try safer model",
@@ -125,6 +125,10 @@ function fmtNumber(value: number | null | undefined, digits = 3) {
   const abs = Math.abs(value);
   if (abs !== 0 && (abs < 1e-3 || abs >= 1e4)) return value.toExponential(digits);
   return Number(value.toPrecision(digits + 1)).toString();
+}
+
+function plainUiMessage(value: string | null | undefined) {
+  return String(value ?? "").replace(/`([^`]+)`/g, "$1");
 }
 
 function metricUnit(key: string) {
@@ -355,7 +359,7 @@ function ReportHero({ result, semantics, traceName, model, appVersion, verdict, 
     </div>
     {!result && !isFitting ? <div className="workflow-empty-state inline compact-empty-state"><p>{rt(language, "noCompletedFit")}</p><button type="button" className="primary" onClick={() => setActiveView("fitting")}>{rt(language, "goToFitting")}</button></div> : null}
     {isFitting ? <p className="fit-primary-message info">{rt(language, "running")}</p> : null}
-    {result ? <p className="report-hero-message">{result.message}</p> : null}
+    {result ? <p className="report-hero-message">{plainUiMessage(result.message)}</p> : null}
     {result?.reportability_reason ? <p className="muted">{result.reportability_reason}</p> : null}
   </section>;
 }
@@ -387,7 +391,7 @@ function CriticalIssue({ result, semantics, language }: { result: FitResult | nu
 
 function FitMetricsSection({ result, sessionStats, language }: { result: FitResult; sessionStats: FitSessionStats; language: Language }) {
   const rows = metricRows(result, sessionStats, language);
-  return <section className="card report-section report-fit-metrics-card"><h2>{rt(language, "metrics")}</h2><div className="table-wrap"><table className="report-metric-table"><tbody>{rows.map((row) => <tr key={row.parameter}><td>{row.parameter}</td><td>{row.value}</td><td>{row.explanation}</td></tr>)}</tbody></table></div>{result.fit_diagnostics?.optimizer_message ? <p className="fit-process-note"><strong>Solver message: </strong>{result.fit_diagnostics.optimizer_message}</p> : null}</section>;
+  return <section className="card report-section report-fit-metrics-card"><h2>{rt(language, "metrics")}</h2><div className="table-wrap"><table className="report-metric-table"><tbody>{rows.map((row) => <tr key={row.parameter}><td>{row.parameter}</td><td>{row.value}</td><td>{row.explanation}</td></tr>)}</tbody></table></div>{result.fit_diagnostics?.optimizer_message ? <p className="fit-process-note"><strong>Solver message: </strong>{plainUiMessage(result.fit_diagnostics.optimizer_message)}</p> : null}</section>;
 }
 
 function ParameterSummary({ result, language, diagnosticOnly }: { result: FitResult; language: Language; diagnosticOnly: boolean }) {
