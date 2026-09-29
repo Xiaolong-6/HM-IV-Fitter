@@ -1,6 +1,7 @@
-"""FastAPI application for the greenfield IV-fitter backend."""
+"""FastAPI development/oracle adapter for HM-IV-Fitter."""
 
 from __future__ import annotations
+
 import hmac
 import logging
 import os
@@ -67,8 +68,6 @@ def _raise_internal_error(exc: Exception, context: str) -> NoReturn:
     LOGGER.exception("%s", context)
     detail = str(exc) if _debug_errors_enabled() else "Internal server error. See backend log for details."
     raise HTTPException(status_code=500, detail=detail) from exc
-
-
 
 
 @app.middleware("http")
@@ -282,6 +281,7 @@ def _handle_endpoint_error(exc: Exception, context: str) -> NoReturn:
     if isinstance(exc, (ValueError, ValidationError)):
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     _raise_internal_error(exc, context)
+
 
 @app.post("/api/v2/import-csv-text")
 @app.post("/api/import-csv-text")
