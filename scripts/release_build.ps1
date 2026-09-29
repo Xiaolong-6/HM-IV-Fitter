@@ -50,10 +50,10 @@ if ($readme -notmatch "Current version:\s+\*\*$([regex]::Escape($version))\*\*")
   throw "README current version does not match $version."
 }
 
-Write-Host "Release build for IV-fitter Web UI v$version"
+Write-Host "Static release build for HM-IV-Fitter v$version"
 
-Invoke-Native "Frontend production build" "npm.cmd" @("run", "build")
-Invoke-Native "Frontend unit tests" "npm.cmd" @("run", "test:frontend", "--", "--reporter=dot")
+Invoke-Native "Static browser production build" "npm.cmd" @("run", "build:static")
+Invoke-Native "Frontend regression tests" "npm.cmd" @("run", "test:frontend", "--", "--reporter=dot")
 
 if (-not $SkipPythonTests) {
   if (Test-Path ".venv/Scripts/python.exe") {
@@ -66,10 +66,22 @@ if (-not $SkipPythonTests) {
   Invoke-Native "Backend Python compile check" $python @("-m", "compileall", "-q", "backend/ivfitter", "backend/tests")
 }
 
+$required = @(
+  "frontend/dist/index.html",
+  "frontend/dist/browser-runtime.worker.js",
+  "frontend/dist/static-python/manifest.json",
+  "frontend/dist/static-python/ivfitter/browser_bridge.py"
+)
+foreach ($path in $required) {
+  if (-not (Test-Path $path)) {
+    throw "Static artifact is missing: $path"
+  }
+}
+
 if (-not $SkipPackage) {
   $releaseDir = Join-Path $Root "release"
-  $packageDir = Join-Path $releaseDir "iv-fitter-webui-v$version"
-  $zipPath = Join-Path $releaseDir "iv-fitter-webui-v$version.zip"
+  $packageDir = Join-Path $releaseDir "hm-iv-fitter-static-v$version"
+  $zipPath = Join-Path $releaseDir "hm-iv-fitter-static-v$version.zip"
 
   New-Item -ItemType Directory -Force -Path $releaseDir | Out-Null
   if (Test-Path $packageDir) {
@@ -78,19 +90,12 @@ if (-not $SkipPackage) {
   if (Test-Path $zipPath) {
     Remove-Item -LiteralPath $zipPath -Force
   }
+
   New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
-
-  $trackedFiles = git ls-files
-  foreach ($file in $trackedFiles) {
-    $target = Join-Path $packageDir $file
-    $targetDir = Split-Path -Parent $target
-    New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
-    Copy-Item -LiteralPath (Join-Path $Root $file) -Destination $target
-  }
-
-  Copy-Item -LiteralPath (Join-Path $Root "frontend/dist") -Destination (Join-Path $packageDir "frontend/dist") -Recurse
+  Copy-Item -LiteralPath (Join-Path $Root "frontend/dist/*") -Destination $packageDir -Recurse
+  Copy-Item -LiteralPath (Join-Path $Root "LICENSE") -Destination (Join-Path $packageDir "LICENSE.txt")
   Compress-Archive -Path (Join-Path $packageDir "*") -DestinationPath $zipPath -Force
   Write-Host "Created $zipPath"
 }
 
-Write-Host "Release build completed."
+Write-Host "Static release build completed."
