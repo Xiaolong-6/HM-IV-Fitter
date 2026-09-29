@@ -41,17 +41,21 @@ def _current_metadata(header: object) -> dict | None:
     if _is_false_current_column(header) or _is_voltage_like(header) or _is_trace_group_col(header):
         return None
     key = _header_key(header)
+    # Unit-bearing headers take precedence over the conventional variable
+    # letter. In particular, publication source files may label an ordinary
+    # current as J_A even when the paper reports I-V characteristics. Treat
+    # explicit area-normalized units as density, while *_J_A remains current.
+    has_density_unit = "macm2" in key or "acm2" in key
+    explicit_amp_current = key.endswith("ja") and not has_density_unit
     is_density = (
         "currentdensity" in key
-        or "macm2" in key
+        or has_density_unit
         or key == "j"
-        or key.startswith("j")
-        or "jm" in key
-        or key.endswith("ja")
-        or key.endswith("jma")
+        or ("jma" in key and not explicit_amp_current)
     )
     is_current = (
         is_density
+        or explicit_amp_current
         or key in {"i", "a", "ma", "ia", "current", "currenta", "measuredcurrenta", "smucurrenta", "ch1"}
         or "current" in key
         or key.endswith("currenta")

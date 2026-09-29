@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from ivfitter.api.main import app
@@ -113,7 +115,7 @@ def test_wide_import_pairs_multiple_voltage_columns_when_possible():
     assert traces[0][0].metadata["import_summary"] == "Imported 2 traces from paired voltage/current columns."
 
 
-def test_wide_publication_import_recognizes_prefixed_j_a_columns():
+def test_wide_publication_import_treats_prefixed_j_a_as_ampere_current():
     text = (
         "1.Dark.Voltage_V,1.Dark.J_A,2.Illumination.Voltage_V,2.Illumination.J_A\n"
         "2,0.05273,2,0.06813\n"
@@ -125,10 +127,28 @@ def test_wide_publication_import_recognizes_prefixed_j_a_columns():
     assert len(traces) == 2
     assert traces[0][0].trace_id == "1.Dark.J A"
     assert traces[1][0].trace_id == "2.Illumination.J A"
-    assert traces[0][0].metadata["y_quantity"] == "current_density"
+    assert traces[0][0].metadata["y_quantity"] == "current"
     assert traces[0][0].metadata["y_unit"] == "A"
     assert traces[0][0].voltage_V == [2.0, 1.973]
     assert traces[1][0].current_A == [0.06813, 0.06513]
+
+
+def test_real_kadowaki_publication_file_imports_as_ampere_current():
+    root = Path(__file__).resolve().parents[2]
+    source = root / "examples" / "demo_data" / "publication_data" / "T_Kadowaki_et_al_2025.csv"
+    traces = _import(source.read_text(encoding="utf-8"))
+
+    assert len(traces) == 2
+    dark, dark_quality = traces[0]
+    illuminated, illuminated_quality = traces[1]
+    assert dark.trace_id == "1.Dark.J A"
+    assert illuminated.trace_id == "2.Illumination.J A"
+    assert dark.metadata["y_quantity"] == "current"
+    assert dark.metadata["y_unit"] == "A"
+    assert illuminated.metadata["y_quantity"] == "current"
+    assert illuminated.metadata["y_unit"] == "A"
+    assert dark_quality.rows_imported > 100
+    assert illuminated_quality.rows_imported == dark_quality.rows_imported
 
 
 def test_import_api_returns_multi_trace_summary():
