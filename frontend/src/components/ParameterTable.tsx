@@ -210,6 +210,10 @@ export function ParameterTable({
   onModelChange,
   language,
   disabled = false,
+  canRecommend = false,
+  recommendationBusy = false,
+  recommendationMessage = null,
+  onRecommendSetup,
 }: {
   result: FitResult | null;
   model: ModelSpec;
@@ -217,6 +221,10 @@ export function ParameterTable({
   onModelChange: (model: ModelSpec) => void;
   language: Language;
   disabled?: boolean;
+  canRecommend?: boolean;
+  recommendationBusy?: boolean;
+  recommendationMessage?: string | null;
+  onRecommendSetup?: () => void;
 }) {
   void registry;
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -226,10 +234,28 @@ export function ParameterTable({
 
   return (
     <section className="card parameter-card">
-      <h2>
-        {t(language, "parameters")}{" "}
-        <HelpTip text={parameterText("help", language)} />
-      </h2>
+      <div className="parameter-card-header">
+        <h2>
+          {t(language, "parameters")}{" "}
+          <HelpTip text={parameterText("help", language)} />
+        </h2>
+        {onRecommendSetup ? (
+          <button
+            type="button"
+            className="secondary parameter-recommend-button"
+            disabled={disabled || !canRecommend || recommendationBusy}
+            onClick={onRecommendSetup}
+            title="Estimate conservative initial values and search bounds from the selected trace. User-edited and fitted-as-initial values are preserved."
+          >
+            {recommendationBusy ? "Recommending…" : "Recommend setup"}
+          </button>
+        ) : null}
+      </div>
+      {recommendationMessage ? (
+        <p className="parameter-recommendation-note" role="status">
+          {recommendationMessage}
+        </p>
+      ) : null}
       {sourceRows.length === 0 ? (
         <p className="muted">{t(language, "runFitForParameters")}</p>
       ) : (
