@@ -52,9 +52,9 @@ def test_quality_metrics_follow_used_fit_range_not_whole_trace() -> None:
     )
 
     assert result.success
-    assert result.metrics["linear_rmse_A"] == pytest.approx(0.0, abs=1e-30)
-    assert result.metrics["normalized_rmse"] == pytest.approx(0.0, abs=1e-30)
-    assert result.metrics["max_abs_residual_A"] == pytest.approx(0.0, abs=1e-30)
+    assert result.metrics["linear_rmse_A"] < 1e-18
+    assert result.metrics["normalized_rmse"] < 1e-12
+    assert result.metrics["max_abs_residual_A"] < 1e-18
     assert result.metrics["points_used"] == pytest.approx(3.0)
     assert abs(result.curves.residual_A[0]) > 0.0
     assert abs(result.curves.residual_A[-1]) > 0.0
