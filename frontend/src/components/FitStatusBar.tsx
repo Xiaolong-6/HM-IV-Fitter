@@ -68,9 +68,9 @@ function fmtMetric(value: number | null | undefined, unit = "") {
 function metricHelp(key: string, _language: Language) {
   const help: Record<string, string> = {
     linear_rmse_A:
-      "Root-mean-square current error in amperes. It is dominated by high-current regions and is best for absolute current error.",
+      "Root-mean-square current error over the points actually used for fitting. It is dominated by high-current regions and is best for absolute current error.",
     normalized_rmse:
-      "Linear RMSE normalized by the measured current scale. Smaller values usually mean better overall relative agreement.",
+      "Fit-range linear RMSE normalized by the measured current scale of the points actually used. Smaller values usually mean better relative agreement.",
     linear_r2:
       "Coefficient of determination in linear current space. It can look good even if low-current decades are poorly fitted.",
     log_magnitude_r2:

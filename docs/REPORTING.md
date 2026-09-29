@@ -23,7 +23,7 @@ Every completed fit should expose a compact, user-visible process summary near t
 
 Required fields include points used/excluded, free and fixed parameter counts, residual degrees of freedom, elapsed fit time, solver name/mode, residual weighting, loss function, optimizer status/message, function evaluations, Jacobian evaluations when available, cost/optimality when available, active bounds, and session totals.
 
-Quality metrics should include linear RMSE, normalized RMSE, linear R², log-magnitude R², log-magnitude MAE, weighted chi-square, and relative weighted reduced chi-square. The UI and manual must state that relative weighted reduced chi-square is strictly statistical only when residual weights represent actual measurement uncertainty; otherwise it is a residual-scale diagnostic under the selected weighting.
+Quality metrics should include linear RMSE, normalized RMSE, linear R², log-magnitude R², log-magnitude MAE, weighted chi-square, and relative weighted reduced chi-square. These fit-quality metrics are computed from the points actually used for fitting after voltage-range and compliance selection; full-trace residual arrays remain available for visual inspection and export. The UI and manual must state that relative weighted reduced chi-square is strictly statistical only when residual weights represent actual measurement uncertainty; otherwise it is a residual-scale diagnostic under the selected weighting.
 
 ## Future reporting work
 
