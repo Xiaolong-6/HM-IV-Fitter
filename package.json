@@ -14,8 +14,7 @@
     "lint:fix": "npm --prefix frontend run lint:fix",
     "format": "npm --prefix frontend run format",
     "format:check": "npm --prefix frontend run format:check",
-    "release:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release_build.ps1",
-    "portable:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build_portable_windows.ps1"
+    "release:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/release_build.ps1"
   },
   "dependencies": {
     "katex": "^0.16.22",
