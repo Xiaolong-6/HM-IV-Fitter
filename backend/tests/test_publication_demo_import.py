@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 
 from ivfitter.api.main import app
@@ -129,6 +131,24 @@ def test_wide_publication_import_treats_prefixed_j_a_as_ampere_current():
     assert traces[0][0].metadata["y_unit"] == "A"
     assert traces[0][0].voltage_V == [2.0, 1.973]
     assert traces[1][0].current_A == [0.06813, 0.06513]
+
+
+def test_real_kadowaki_publication_file_imports_as_ampere_current():
+    root = Path(__file__).resolve().parents[2]
+    source = root / "examples" / "demo_data" / "publication_data" / "T_Kadowaki_et_al_2025.csv"
+    traces = _import(source.read_text(encoding="utf-8"))
+
+    assert len(traces) == 2
+    dark, dark_quality = traces[0]
+    illuminated, illuminated_quality = traces[1]
+    assert dark.trace_id == "1.Dark.J A"
+    assert illuminated.trace_id == "2.Illumination.J A"
+    assert dark.metadata["y_quantity"] == "current"
+    assert dark.metadata["y_unit"] == "A"
+    assert illuminated.metadata["y_quantity"] == "current"
+    assert illuminated.metadata["y_unit"] == "A"
+    assert dark_quality.rows_imported > 100
+    assert illuminated_quality.rows_imported == dark_quality.rows_imported
 
 
 def test_import_api_returns_multi_trace_summary():
