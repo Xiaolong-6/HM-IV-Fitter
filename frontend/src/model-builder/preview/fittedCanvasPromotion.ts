@@ -31,9 +31,23 @@ export function seedPreviewCanvasStateFromModel(
       const parameters = node.parameters.map((parameter) => {
         const source = graphComponent.params[parameter.symbol];
         if (!source || !Number.isFinite(source.value)) return parameter;
-        if (source.value === parameter.value) return parameter;
+        const nextParameter = {
+          ...parameter,
+          value: source.value,
+          lower: source.lower ?? null,
+          upper: source.upper ?? null,
+          fit: source.fit ?? parameter.fit,
+        };
+        if (
+          nextParameter.value === parameter.value &&
+          nextParameter.lower === (parameter.lower ?? null) &&
+          nextParameter.upper === (parameter.upper ?? null) &&
+          nextParameter.fit === parameter.fit
+        ) {
+          return parameter;
+        }
         changed = true;
-        return { ...parameter, value: source.value };
+        return nextParameter;
       });
       return changed ? { ...node, parameters } : node;
     }),

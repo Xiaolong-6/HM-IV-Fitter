@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import type { EquationSummary, FitConfig, FitResult, FitSessionStats, FunctionDefinition, ModelSpec, TraceData } from "../model/types";
-import { exportReport, exportReportCsv, fitTrace, getRegistry, equations, validateModel } from "../api/client";
+import { exportReport, exportReportCsv, fitTrace, getRegistry, equations, suggestBounds, validateModel } from "../api/client";
 import { browserRuntimeEnabled, getBrowserRuntimeStatus, resetBrowserRuntime, subscribeBrowserRuntimeStatus } from "../api/browserRuntime";
 import { emptyTrace, estimateResidualFloorA } from "../model/utils";
 import { seedModelFromFittedValues } from "../model/parameterGrouping";
@@ -16,6 +16,7 @@ import { buildReportBaseName, emptyReportArtifacts, type ReportArtifacts } from 
 import { canGenerateReport, createErrorLifecycle, createRunningLifecycle, createTimeoutLifecycle, elapsedSecondsSince, nextRunId, shouldAcceptRunResult, terminalCancelledState, type FitLifecycleState } from "../model/fitLifecycle";
 import { buildHtmlReportDocument } from "../model/htmlReport";
 import { createInitialModel, initialConfig } from "../model/defaults";
+import { applyDataFitSuggestions } from "../model/boundsSuggestion";
 import { emptyCanvasState, canvasStateToMb3Graph } from "../model-builder/preview/canvasState";
 import { LAYOUT_STORAGE_KEY, readJson } from "../model-builder/preview/previewStorage";
 import { compileMb3Graph } from "../model-builder/domain/compile";
@@ -57,6 +58,8 @@ type FittingPageState = {
   result: FitResult | null;
   error: string | null;
   fitPromotionNotice: string | null;
+  recommendationNotice: string | null;
+  recommendationBusy: boolean;
   noTraceRunAttempted: boolean;
   fitStatus: FitStatusState;
   reportArtifacts: ReportArtifacts;
@@ -104,6 +107,8 @@ function createInitialFittingPageState(): FittingPageState {
     result: null,
     error: null,
     fitPromotionNotice: null,
+    recommendationNotice: null,
+    recommendationBusy: false,
     noTraceRunAttempted: false,
     fitStatus: {
       isFitting: false,
@@ -146,6 +151,8 @@ export function FittingPage() {
     result,
     error,
     fitPromotionNotice,
+    recommendationNotice,
+    recommendationBusy,
     noTraceRunAttempted,
     fitStatus,
     reportArtifacts,
@@ -171,6 +178,8 @@ export function FittingPage() {
   const setResult = (value: StateUpdater<FitResult | null>) => setPageState("result", value);
   const setError = (value: StateUpdater<string | null>) => setPageState("error", value);
   const setFitPromotionNotice = (value: StateUpdater<string | null>) => setPageState("fitPromotionNotice", value);
+  const setRecommendationNotice = (value: StateUpdater<string | null>) => setPageState("recommendationNotice", value);
+  const setRecommendationBusy = (value: StateUpdater<boolean>) => setPageState("recommendationBusy", value);
   const setNoTraceRunAttempted = (value: StateUpdater<boolean>) => setPageState("noTraceRunAttempted", value);
   const setReportArtifacts = (value: StateUpdater<ReportArtifacts>) => setPageState("reportArtifacts", value);
   const setEquationSummary = (value: StateUpdater<EquationSummary | null>) => setPageState("equationSummary", value);
@@ -188,6 +197,7 @@ export function FittingPage() {
   );
 
   const abortFitRef = useRef<AbortController | null>(null);
+  const recommendationAbortRef = useRef<AbortController | null>(null);
   const fitRunSeqRef = useRef(0);
   const activeFitRunIdRef = useRef<number | null>(null);
   const cancelledFitRunIdsRef = useRef(new Set<number>());
@@ -207,6 +217,10 @@ export function FittingPage() {
   }
 
   function invalidateFitArtifacts() {
+    recommendationAbortRef.current?.abort();
+    recommendationAbortRef.current = null;
+    setRecommendationBusy(false);
+    setRecommendationNotice(null);
     invalidateActiveFitContext();
     setResult(null);
     setReportArtifacts(emptyReportArtifacts);
@@ -236,6 +250,7 @@ export function FittingPage() {
 
   function updateUserModel(next: ModelSpec) {
     invalidateFitArtifacts();
+    syncStoredCanvasParametersFromModel(next);
     setModel(next);
   }
 
@@ -314,6 +329,69 @@ export function FittingPage() {
     ].join("|");
   }, [selectedTrace]);
 
+  async function recommendFitSetup() {
+    if (
+      recommendationBusy ||
+      isFitting ||
+      !hasSelectedTrace ||
+      !hasRunnableModel ||
+      registry.length === 0
+    ) {
+      return;
+    }
+
+    recommendationAbortRef.current?.abort();
+    const controller = new AbortController();
+    recommendationAbortRef.current = controller;
+    setRecommendationBusy(true);
+    setRecommendationNotice("Analyzing the selected trace…");
+
+    try {
+      const response = await suggestBounds(
+        selectedTrace,
+        model,
+        config,
+        controller.signal,
+      );
+      if (controller.signal.aborted) return;
+
+      if (response.status !== "ok") {
+        setRecommendationNotice(
+          response.notes[0] ?? "No data-based recommendations are available for this setup.",
+        );
+        return;
+      }
+
+      const applied = applyDataFitSuggestions(model, registry, response);
+      const changed =
+        applied.report.bounds.applied + applied.report.initials.applied;
+      const protectedFields =
+        applied.report.bounds.skipped + applied.report.initials.skipped;
+
+      if (changed === 0) {
+        setRecommendationNotice(
+          protectedFields > 0
+            ? `Nothing changed · ${protectedFields} protected/custom field(s) preserved.`
+            : "No applicable data-based recommendations for this model.",
+        );
+        return;
+      }
+
+      updateUserModel(applied.model);
+      setRecommendationNotice(
+        `Recommended setup applied · ${applied.report.initials.applied} initial(s), ${applied.report.bounds.applied} bound set(s) updated${protectedFields ? ` · ${protectedFields} protected field(s) preserved` : ""}.`,
+      );
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      setRecommendationNotice(`Recommendation failed: ${String(e)}`);
+    } finally {
+      if (recommendationAbortRef.current === controller) {
+        recommendationAbortRef.current = null;
+        setRecommendationBusy(false);
+      }
+    }
+  }
+
   useEffect(() => {
     if (!selectedTrace.voltage_V.length) return;
     const nextFloor = estimateResidualFloorA(selectedTrace);
@@ -357,6 +435,7 @@ export function FittingPage() {
     cancelledFitRunIdsRef.current.delete(runId);
     setError(null);
     setFitPromotionNotice(null);
+    setRecommendationNotice(null);
     setResult(null);
     setReportArtifacts(emptyReportArtifacts);
     setDismissedWarningKey("");
@@ -485,7 +564,7 @@ export function FittingPage() {
         setFitPromotionNotice(null);
       } else {
         setFitPromotionNotice(
-          "Fit ended numerically, but quality gating did not pass; fitted values are shown but were not promoted to the next initials. Try restoring initials, applying data bounds, or seeding from synthetic ground truth.",
+          "Fit ended numerically, but quality gating did not pass; fitted values are shown but were not promoted to the next initials. Review the parameter setup or use Recommend setup before rerunning.",
         );
       }
       setOpenSections((current) => ({
@@ -773,6 +852,10 @@ export function FittingPage() {
             model={model}
             updateParameterModel={updateUserModel}
             isFitting={isFitting}
+            canRecommendSetup={hasSelectedTrace && hasRunnableModel && registry.length > 0}
+            recommendationBusy={recommendationBusy}
+            recommendationMessage={recommendationNotice}
+            onRecommendSetup={recommendFitSetup}
           />
         ) : (
           <ReportWorkflowPage

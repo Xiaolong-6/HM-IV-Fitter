@@ -7,6 +7,8 @@ import {
   groupParameterRows,
   placementGroupForComponent,
   seedModelFromFittedValues,
+  setComponentFitState,
+  updateModelParameterSpec,
 } from "../parameterGrouping";
 
 function model(): ModelSpec {
@@ -225,5 +227,39 @@ describe("graph fitted-value promotion", () => {
     const promoted = seedModelFromFittedValues(source, fit);
     expect(promoted.series[0].params.Rs_ohm.value).toBe(75);
     expect(promoted.graph?.components[0].params.R.value).toBe(75);
+  });
+});
+
+
+describe("graph-backed parameter editing", () => {
+  it("updates legacy and graph aliases together", () => {
+    const source = graphBackedModel();
+    const updated = updateModelParameterSpec(
+      source,
+      "series",
+      "Rs",
+      "Rs_ohm",
+      { value: 250, lower: 2, upper: 5e5, fit: false },
+    );
+
+    expect(updated.series[0].params.Rs_ohm).toMatchObject({
+      value: 250,
+      lower: 2,
+      upper: 5e5,
+      fit: false,
+    });
+    expect(updated.graph?.components[0].params.R).toMatchObject({
+      value: 250,
+      lower: 2,
+      upper: 5e5,
+      fit: false,
+    });
+  });
+
+  it("keeps batch fit toggles aligned with graph parameters", () => {
+    const source = graphBackedModel();
+    const updated = setComponentFitState(source, "series", "Rs", false);
+    expect(updated.series[0].params.Rs_ohm.fit).toBe(false);
+    expect(updated.graph?.components[0].params.R.fit).toBe(false);
   });
 });

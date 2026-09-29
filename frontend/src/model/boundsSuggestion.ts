@@ -1,5 +1,6 @@
 import type { BoundsSuggestionResponse, FunctionDefinition, ModelSpec, ParameterBoundsSuggestion, ParameterSpec } from "./types";
-import { parameterKey } from "./parameterGrouping";
+import { graphParameterNameForLegacyParameter, parameterKey, updateModelParameterSpec } from "./parameterGrouping";
+import { DEFAULT_COMPONENT_TEMPLATES } from "../model-builder/preview/canvasState";
 
 type ParameterSource = "registry_default" | "data_suggested" | "user_edited" | "fit_derived_initial";
 
@@ -31,6 +32,68 @@ function registryParam(registry: FunctionDefinition[], functionType: string, par
   return registry.find((definition) => definition.function_type === functionType)?.parameters.find((param) => param.name === paramName);
 }
 
+type RecommendationDefault = {
+  default?: number | null;
+  lower?: number | null;
+  upper?: number | null;
+};
+
+function modelBuilderTemplateDefault(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+): RecommendationDefault | undefined {
+  const graphComponent = model.graph?.components.find(
+    (component) => component.id === componentId,
+  );
+  if (!graphComponent) return undefined;
+
+  const graphName = graphParameterNameForLegacyParameter(
+    model,
+    componentId,
+    paramName,
+  );
+  if (!graphName) return undefined;
+
+  const templateKey =
+    typeof graphComponent.metadata?.templateKey === "string"
+      ? graphComponent.metadata.templateKey
+      : null;
+  if (!templateKey) return undefined;
+
+  const template = DEFAULT_COMPONENT_TEMPLATES.find(
+    (candidate) => candidate.key === templateKey,
+  );
+  if (!template) return undefined;
+
+  let parameter = template.parameters.find(
+    (candidate) => candidate.symbol === graphName,
+  );
+  if (!parameter && templateKey === "resistance" && template.parameters.length === 1) {
+    parameter = template.parameters[0];
+  }
+  if (!parameter) return undefined;
+
+  return {
+    default: parameter.value,
+    lower: parameter.lower ?? null,
+    upper: parameter.upper ?? null,
+  };
+}
+
+function recommendationDefault(
+  model: ModelSpec,
+  registry: FunctionDefinition[],
+  componentId: string,
+  functionType: string,
+  paramName: string,
+): RecommendationDefault | undefined {
+  return (
+    modelBuilderTemplateDefault(model, componentId, paramName) ??
+    registryParam(registry, functionType, paramName)
+  );
+}
+
 function sameNumber(a: number | null | undefined, b: number | null | undefined) {
   const aa = a ?? null;
   const bb = b ?? null;
@@ -48,6 +111,27 @@ function sourceReason(model: ModelSpec, componentId: string, paramName: string):
   const comp = [...model.series, ...model.core, ...model.parallel].find((item) => item.id === componentId);
   const sources = comp?.metadata?.parameter_sources as Record<string, { reason?: string }> | undefined;
   return sources?.[paramName]?.reason ?? null;
+}
+
+export function initialSourceTitle(
+  model: ModelSpec,
+  componentId: string,
+  paramName: string,
+  _language: "en" = "en",
+) {
+  const source =
+    parameterSource(model, componentId, paramName, "initial") ??
+    "registry_default";
+  const reason = sourceReason(model, componentId, paramName);
+  const label =
+    source === "data_suggested"
+      ? "Initial source: data-suggested from the selected trace."
+      : source === "user_edited"
+        ? "Initial source: user-edited."
+        : source === "fit_derived_initial"
+          ? "Initial source: promoted from the previous quality-gated fit."
+          : "Initial source: registry default.";
+  return reason ? `${label}\n${reason}` : label;
 }
 
 export function boundsSourceTitle(
@@ -105,6 +189,59 @@ function shouldApplyBounds(spec: ParameterSpec, registryDefault: { lower?: numbe
   return source === "data_suggested" || isDefaultBounds(spec, registryDefault);
 }
 
+function isDefaultInitial(
+  spec: ParameterSpec,
+  registryDefault: { default?: number | null } | undefined,
+) {
+  return sameNumber(spec.value, registryDefault?.default ?? null);
+}
+
+function shouldApplyInitial(
+  spec: ParameterSpec,
+  registryDefault: { default?: number | null } | undefined,
+  source: ParameterSource | null,
+) {
+  if (source === "user_edited" || source === "fit_derived_initial") return false;
+  return source === "data_suggested" || isDefaultInitial(spec, registryDefault);
+}
+
+function constrainedSuggestedBounds(
+  suggestion: ParameterBoundsSuggestion,
+  defaultSpec: RecommendationDefault | undefined,
+) {
+  let lower = suggestion.lower ?? null;
+  let upper = suggestion.upper ?? null;
+
+  if (defaultSpec?.lower != null) {
+    lower = lower == null ? defaultSpec.lower : Math.max(lower, defaultSpec.lower);
+  }
+  if (defaultSpec?.upper != null) {
+    upper = upper == null ? defaultSpec.upper : Math.min(upper, defaultSpec.upper);
+  }
+  if (lower != null && upper != null && lower > upper) {
+    return null;
+  }
+  return { lower, upper };
+}
+
+function initialIsProtected(
+  spec: ParameterSpec,
+  defaultSpec: RecommendationDefault | undefined,
+  source: ParameterSource | null,
+) {
+  if (source === "user_edited" || source === "fit_derived_initial") return true;
+  if (source === "data_suggested") return false;
+  return !isDefaultInitial(spec, defaultSpec);
+}
+
+function boundsContainValue(
+  lower: number | null,
+  upper: number | null,
+  value: number,
+) {
+  return (lower == null || value >= lower) && (upper == null || value <= upper);
+}
+
 function skipReason(spec: ParameterSpec, registryDefault: { lower?: number | null; upper?: number | null } | undefined, source: ParameterSource | null) {
   if (source === "user_edited") return "Bounds were user-edited, so automatic suggestions did not overwrite them.";
   if (!isDefaultBounds(spec, registryDefault)) return "Current bounds are not registry defaults and were not previous data suggestions.";
@@ -115,18 +252,41 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
   let applied = 0;
   let skipped = 0;
   const details: DataBoundsApplicationDetail[] = [];
-  const copy = structuredClone(model) as ModelSpec;
+  let next = structuredClone(model) as ModelSpec;
+
   for (const location of ["series", "core", "parallel"] as const) {
-    copy[location] = copy[location].map((comp) => {
-      let nextComp = comp;
+    for (const comp of model[location]) {
       for (const [name, spec] of Object.entries(comp.params)) {
         const key = parameterKey(comp.id, name);
         const suggestion: ParameterBoundsSuggestion | undefined = response.suggestions[key];
         if (!suggestion) continue;
-        const sources = comp.metadata?.parameter_sources as Record<string, { bounds?: ParameterSource }> | undefined;
-        const boundSource = sources?.[name]?.bounds ?? null;
-        const reg = registryParam(registry, comp.function_type, name);
+        const boundSource = parameterSource(model, comp.id, name, "bounds");
+        const reg = recommendationDefault(
+          model,
+          registry,
+          comp.id,
+          comp.function_type,
+          name,
+        );
+        const constrained = constrainedSuggestedBounds(suggestion, reg);
+        const initialSource = parameterSource(model, comp.id, name, "initial");
+        const protectedInitial = initialIsProtected(spec, reg, initialSource);
+
+        let policySkipReason: string | null = null;
         if (!shouldApplyBounds(spec, reg, boundSource)) {
+          policySkipReason = skipReason(spec, reg, boundSource);
+        } else if (!constrained) {
+          policySkipReason =
+            "Suggested bounds are incompatible with the model's allowed parameter range.";
+        } else if (
+          protectedInitial &&
+          !boundsContainValue(constrained.lower, constrained.upper, spec.value)
+        ) {
+          policySkipReason =
+            "Suggested bounds would exclude a protected initial value, so the current bounds were preserved.";
+        }
+
+        if (policySkipReason || !constrained) {
           skipped += 1;
           details.push({
             key,
@@ -139,10 +299,11 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
             suggestedUpper: suggestion.upper ?? null,
             source: boundSource ?? "none",
             reason: suggestion.reason,
-            skipReason: skipReason(spec, reg, boundSource),
+            skipReason: policySkipReason ?? "Recommendation could not be applied safely.",
           });
           continue;
         }
+
         applied += 1;
         details.push({
           key,
@@ -151,24 +312,106 @@ export function applyDataBoundsSuggestions(model: ModelSpec, registry: FunctionD
           action: "applied",
           previousLower: spec.lower ?? null,
           previousUpper: spec.upper ?? null,
-          currentLower: suggestion.lower ?? null,
-          currentUpper: suggestion.upper ?? null,
+          currentLower: constrained.lower,
+          currentUpper: constrained.upper,
           suggestedLower: suggestion.lower ?? null,
           suggestedUpper: suggestion.upper ?? null,
           source: boundSource ?? "registry_default",
           reason: suggestion.reason,
         });
-        const params = { ...nextComp.params, [name]: { ...nextComp.params[name], lower: suggestion.lower ?? null, upper: suggestion.upper ?? null } };
-        const metadata = { ...(nextComp.metadata ?? {}) };
-        const existing = (metadata.parameter_sources as Record<string, unknown> | undefined) ?? {};
-        metadata.parameter_sources = {
-          ...existing,
-          [name]: { ...((existing[name] as object | undefined) ?? {}), bounds: "data_suggested", reason: suggestion.reason },
-        };
-        nextComp = { ...nextComp, params, metadata };
+        next = updateModelParameterSpec(next, location, comp.id, name, {
+          lower: constrained.lower,
+          upper: constrained.upper,
+        });
+        next = setParamSource(next, comp.id, name, {
+          bounds: "data_suggested",
+          reason: suggestion.reason,
+        });
       }
-      return nextComp;
-    });
+    }
   }
-  return { model: copy, report: { applied, skipped, details } };
+
+  return { model: next, report: { applied, skipped, details } };
+}
+
+export interface DataInitialApplicationReport {
+  applied: number;
+  skipped: number;
+  appliedKeys: string[];
+  skippedKeys: string[];
+}
+
+export function applyDataInitialSuggestions(
+  model: ModelSpec,
+  registry: FunctionDefinition[],
+  response: BoundsSuggestionResponse,
+): { model: ModelSpec; report: DataInitialApplicationReport } {
+  let next = structuredClone(model) as ModelSpec;
+  const appliedKeys: string[] = [];
+  const skippedKeys: string[] = [];
+
+  for (const location of ["series", "core", "parallel"] as const) {
+    for (const comp of model[location]) {
+      for (const [name, spec] of Object.entries(comp.params)) {
+        const key = parameterKey(comp.id, name);
+        const suggestion = response.suggestions[key];
+        if (!suggestion || suggestion.initial == null || !Number.isFinite(suggestion.initial)) {
+          continue;
+        }
+        const source = parameterSource(model, comp.id, name, "initial");
+        const reg = recommendationDefault(
+          model,
+          registry,
+          comp.id,
+          comp.function_type,
+          name,
+        );
+        if (!shouldApplyInitial(spec, reg, source)) {
+          skippedKeys.push(key);
+          continue;
+        }
+
+        const lower = spec.lower ?? null;
+        const upper = spec.upper ?? null;
+        const safeInitial = Math.min(
+          upper ?? Number.POSITIVE_INFINITY,
+          Math.max(lower ?? Number.NEGATIVE_INFINITY, suggestion.initial),
+        );
+        next = updateModelParameterSpec(next, location, comp.id, name, {
+          value: safeInitial,
+        });
+        next = setParamSource(next, comp.id, name, {
+          initial: "data_suggested",
+          reason: suggestion.reason,
+        });
+        appliedKeys.push(key);
+      }
+    }
+  }
+
+  return {
+    model: next,
+    report: {
+      applied: appliedKeys.length,
+      skipped: skippedKeys.length,
+      appliedKeys,
+      skippedKeys,
+    },
+  };
+}
+
+export function applyDataFitSuggestions(
+  model: ModelSpec,
+  registry: FunctionDefinition[],
+  response: BoundsSuggestionResponse,
+) {
+  const bounds = applyDataBoundsSuggestions(model, registry, response);
+  const initials = applyDataInitialSuggestions(bounds.model, registry, response);
+  return {
+    model: initials.model,
+    report: {
+      bounds: bounds.report,
+      initials: initials.report,
+    },
+  };
 }

@@ -112,28 +112,14 @@ export function groupParameterRows(rows: ParameterRowModel[], result: FitResult 
 }
 
 
-function updateComponentParams(
-  model: ModelSpec,
-  location: Location,
-  componentId: string,
-  updater: (spec: ParameterSpec, paramName: string) => ParameterSpec,
-): ModelSpec {
-  return {
-    ...model,
-    [location]: model[location].map((component) => {
-      if (component.id !== componentId) return component;
-      return {
-        ...component,
-        params: Object.fromEntries(
-          Object.entries(component.params).map(([paramName, spec]) => [paramName, updater(spec, paramName)]),
-        ),
-      };
-    }),
-  };
-}
-
 export function setComponentFitState(model: ModelSpec, location: Location, componentId: string, fit: boolean): ModelSpec {
-  return updateComponentParams(model, location, componentId, (spec) => ({ ...spec, fit }));
+  const component = model[location].find((item) => item.id === componentId);
+  if (!component) return model;
+  return Object.keys(component.params).reduce(
+    (next, paramName) =>
+      updateModelParameterSpec(next, location, componentId, paramName, { fit }),
+    model,
+  );
 }
 
 function parameterAliasToken(name: string) {
@@ -159,7 +145,7 @@ function legacyComponentForParameter(
   return null;
 }
 
-function graphParameterNameForLegacyParameter(
+export function graphParameterNameForLegacyParameter(
   model: ModelSpec,
   componentId: string,
   paramName: string,
@@ -190,6 +176,62 @@ function graphParameterNameForLegacyParameter(
     .map(([graphName]) => graphName);
 
   return candidates.length === 1 ? candidates[0] : null;
+}
+
+export function updateModelParameterSpec(
+  model: ModelSpec,
+  location: Location,
+  componentId: string,
+  paramName: string,
+  patch: Partial<ParameterSpec>,
+): ModelSpec {
+  const graphParamName = graphParameterNameForLegacyParameter(
+    model,
+    componentId,
+    paramName,
+  );
+
+  let next: ModelSpec = {
+    ...model,
+    [location]: model[location].map((component) => {
+      if (component.id !== componentId || !component.params[paramName]) {
+        return component;
+      }
+      return {
+        ...component,
+        params: {
+          ...component.params,
+          [paramName]: { ...component.params[paramName], ...patch },
+        },
+      };
+    }),
+  };
+
+  if (graphParamName && model.graph) {
+    next = {
+      ...next,
+      graph: {
+        ...model.graph,
+        components: model.graph.components.map((component) => {
+          if (component.id !== componentId || !component.params[graphParamName]) {
+            return component;
+          }
+          return {
+            ...component,
+            params: {
+              ...component.params,
+              [graphParamName]: {
+                ...component.params[graphParamName],
+                ...patch,
+              },
+            },
+          };
+        }),
+      },
+    };
+  }
+
+  return next;
 }
 
 export function fittedParameterForModelParameter(

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { BoundsSuggestionResponse, FunctionDefinition, ModelSpec } from "../types";
-import { applyDataBoundsSuggestions, boundsSourceTitle, markParameterUserEdited, parameterSource } from "../boundsSuggestion";
+import { applyDataBoundsSuggestions, applyDataFitSuggestions, applyDataInitialSuggestions, boundsSourceTitle, initialSourceTitle, markFittedInitial, markParameterUserEdited, parameterSource } from "../boundsSuggestion";
 
 const registry: FunctionDefinition[] = [{
   function_type: "diode",
@@ -50,6 +50,7 @@ const suggestion: BoundsSuggestionResponse = {
       param_name: "I0_A",
       lower: 1e-18,
       upper: 1e-6,
+      initial: 2e-11,
       source: "data_suggested",
       reason: "current scale from selected trace",
     },
@@ -75,5 +76,227 @@ describe("bounds suggestion application", () => {
     expect(model.core[0].params.I0_A.lower).toBe(1e-20);
     expect(parameterSource(model, "D1", "I0_A", "bounds")).toBe("user_edited");
     expect(report.details[0].skipReason).toContain("user-edited");
+  });
+});
+
+
+describe("initial recommendation application", () => {
+  it("applies a data-suggested initial to a registry-default value", () => {
+    const { model, report } = applyDataInitialSuggestions(baseModel(), registry, suggestion);
+    expect(report.applied).toBe(1);
+    expect(report.skipped).toBe(0);
+    expect(model.core[0].params.I0_A.value).toBe(2e-11);
+    expect(parameterSource(model, "D1", "I0_A", "initial")).toBe("data_suggested");
+    expect(initialSourceTitle(model, "D1", "I0_A", "en")).toContain("data-suggested");
+  });
+
+  it("does not overwrite a user-edited initial", () => {
+    const edited = markParameterUserEdited(baseModel(), "D1", "I0_A", "initial");
+    const { model, report } = applyDataInitialSuggestions(edited, registry, suggestion);
+    expect(report.applied).toBe(0);
+    expect(report.skipped).toBe(1);
+    expect(model.core[0].params.I0_A.value).toBe(1e-12);
+    expect(parameterSource(model, "D1", "I0_A", "initial")).toBe("user_edited");
+  });
+
+  it("does not overwrite a quality-gated fitted-as-initial value", () => {
+    const fitted = structuredClone(baseModel());
+    fitted.core[0].params.I0_A.value = 4e-12;
+    const trusted = markFittedInitial(fitted, "D1", "I0_A");
+    const { model, report } = applyDataInitialSuggestions(trusted, registry, suggestion);
+    expect(report.applied).toBe(0);
+    expect(report.skipped).toBe(1);
+    expect(model.core[0].params.I0_A.value).toBe(4e-12);
+    expect(parameterSource(model, "D1", "I0_A", "initial")).toBe("fit_derived_initial");
+  });
+
+  it("applies bounds and initial recommendations in one conservative operation", () => {
+    const { model, report } = applyDataFitSuggestions(baseModel(), registry, suggestion);
+    expect(report.bounds.applied).toBe(1);
+    expect(report.initials.applied).toBe(1);
+    expect(model.core[0].params.I0_A).toMatchObject({
+      value: 2e-11,
+      lower: 1e-18,
+      upper: 1e-6,
+    });
+  });
+});
+
+
+
+function graphBackedResistanceModel(
+  value = 10,
+  lower = 1e-12,
+  upper = 1e9,
+): ModelSpec {
+  return {
+    core: [],
+    series: [{
+      id: "R1",
+      location: "series",
+      function_type: "constant_rs",
+      law_id: "ohmic",
+      evaluation_form: "voltage_drop",
+      placement: "series_voltage_drop",
+      params: {
+        Rs_ohm: {
+          value,
+          lower,
+          upper,
+          unit: "ohm",
+          fit: true,
+          label: "R",
+        },
+      },
+      metadata: {
+        nickname: "R1",
+        templateKey: "resistance",
+      },
+    }],
+    parallel: [],
+    graph: {
+      terminals: ["V"],
+      reference_node: "GND",
+      nodes: [
+        { id: "V", role: "terminal" },
+        { id: "GND", role: "reference" },
+      ],
+      components: [{
+        id: "R1",
+        function_type: "custom",
+        law_id: "custom_expression",
+        evaluation_form: "voltage_drop",
+        placement: "series_voltage_drop",
+        node_pos: "V",
+        node_neg: "GND",
+        params: {
+          R: {
+            value,
+            lower,
+            upper,
+            unit: "ohm",
+            fit: true,
+            label: "R",
+          },
+        },
+        metadata: {
+          templateKey: "resistance",
+          behavior: "R_of_V",
+          expression: "R",
+        },
+      }],
+      assembly_notes: [],
+      schema_version: "model_builder",
+    },
+    temperature_K: 300,
+    version: "graph-test",
+  };
+}
+
+const resistanceRegistry: FunctionDefinition[] = [{
+  function_type: "constant_rs",
+  location: "series",
+  display_name: "Resistance",
+  role: "series",
+  law_id: "ohmic",
+  law_name: "Ohmic",
+  canonical_equation: "V=IR",
+  available_forms: ["voltage_drop"],
+  default_form: "voltage_drop",
+  allowed_placements: ["series_voltage_drop"],
+  default_placement: "series_voltage_drop",
+  allowed_polarities: ["forward"],
+  default_polarity: "forward",
+  parameters: [{
+    name: "Rs_ohm",
+    default: 10,
+    lower: 0,
+    upper: 1e12,
+    unit: "ohm",
+    fit: true,
+    description: "",
+  }],
+  equation_template: "",
+  help_text: "",
+}];
+
+const resistanceSuggestion: BoundsSuggestionResponse = {
+  status: "ok",
+  notes: [],
+  suggestions: {
+    "R1.Rs_ohm": {
+      component_id: "R1",
+      param_name: "Rs_ohm",
+      lower: 0,
+      upper: 1e6,
+      initial: 100,
+      source: "data_suggested",
+      reason: "high-current dV/dI",
+    },
+  },
+};
+
+describe("Model Builder default recommendation policy", () => {
+  it("allows recommendations to replace untouched system-template defaults", () => {
+    const { model, report } = applyDataFitSuggestions(
+      graphBackedResistanceModel(),
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(1);
+    expect(report.initials.applied).toBe(1);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 100,
+      lower: 1e-12,
+      upper: 1e6,
+    });
+    expect(model.graph?.components[0].params.R).toMatchObject({
+      value: 100,
+      lower: 1e-12,
+      upper: 1e6,
+    });
+  });
+
+  it("does not apply bounds that would exclude a protected user initial", () => {
+    const edited = markParameterUserEdited(
+      graphBackedResistanceModel(2e8, 1e-12, 1e9),
+      "R1",
+      "Rs_ohm",
+      "initial",
+    );
+    const { model, report } = applyDataFitSuggestions(
+      edited,
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(0);
+    expect(report.bounds.skipped).toBe(1);
+    expect(report.initials.applied).toBe(0);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 2e8,
+      lower: 1e-12,
+      upper: 1e9,
+    });
+  });
+
+  it("protects Model Builder values that differ from the system template", () => {
+    const source = graphBackedResistanceModel(777, 2, 5e8);
+    const { model, report } = applyDataFitSuggestions(
+      source,
+      resistanceRegistry,
+      resistanceSuggestion,
+    );
+    expect(report.bounds.applied).toBe(0);
+    expect(report.initials.applied).toBe(0);
+    expect(model.series[0].params.Rs_ohm).toMatchObject({
+      value: 777,
+      lower: 2,
+      upper: 5e8,
+    });
+    expect(model.graph?.components[0].params.R).toMatchObject({
+      value: 777,
+      lower: 2,
+      upper: 5e8,
+    });
   });
 });

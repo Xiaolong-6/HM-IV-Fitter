@@ -9,7 +9,12 @@ import {
 } from "../preview/fittedCanvasPromotion";
 import { LAYOUT_STORAGE_KEY } from "../preview/previewStorage";
 
-function modelWithResistance(value: number): ModelSpec {
+function modelWithResistance(
+  value: number,
+  lower = 1e-12,
+  upper = 1e9,
+  fit = true,
+): ModelSpec {
   return {
     core: [],
     series: [],
@@ -32,9 +37,9 @@ function modelWithResistance(value: number): ModelSpec {
         params: {
           R: {
             value,
-            lower: 1e-12,
-            upper: 1e9,
-            fit: true,
+            lower,
+            upper,
+            fit,
             unit: "ohm",
           },
         },
@@ -104,4 +109,25 @@ describe("fitted canvas promotion", () => {
     const resistor = stored.nodes.find((node: { id: string }) => node.id === "R1");
     expect(resistor.parameters[0].value).toBe(80);
   });
+
+  it("persists bounds and fit state with the graph value", () => {
+    localStorage.setItem(
+      LAYOUT_STORAGE_KEY,
+      JSON.stringify(canvasWithResistance(10)),
+    );
+
+    syncStoredCanvasParametersFromModel(
+      modelWithResistance(77, 5, 5000, false),
+    );
+
+    const stored = JSON.parse(localStorage.getItem(LAYOUT_STORAGE_KEY) ?? "{}");
+    const resistor = stored.nodes.find((node: { id: string }) => node.id === "R1");
+    expect(resistor.parameters[0]).toMatchObject({
+      value: 77,
+      lower: 5,
+      upper: 5000,
+      fit: false,
+    });
+  });
+
 });

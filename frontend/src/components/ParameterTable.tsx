@@ -3,7 +3,6 @@ import type {
   ComponentSpec,
   FitResult,
   FunctionDefinition,
-  Location,
   ModelSpec,
   ParameterSpec,
 } from "../model/types";
@@ -20,9 +19,9 @@ import {
 } from "../model/diagnostics";
 import {
   boundsSourceTitle,
+  initialSourceTitle,
   markParameterUserEdited,
 } from "../model/boundsSuggestion";
-import { updateComponent } from "../model/utils";
 import { HelpTip } from "./HelpTip";
 import { parameterText } from "../content/localizedText";
 import {
@@ -34,6 +33,7 @@ import {
   parameterKey,
   placementGroupTitle,
   setComponentFitState,
+  updateModelParameterSpec,
 } from "../model/parameterGrouping";
 
 function formatParameterNumber(
@@ -142,25 +142,6 @@ function labelForModelParameter(
   return `${nick}.${label}`;
 }
 
-function updateParameter(
-  model: ModelSpec,
-  location: Location,
-  componentId: string,
-  paramName: string,
-  patch: Partial<ParameterSpec>,
-) {
-  const comp = model[location].find((item) => item.id === componentId);
-  if (!comp || !comp.params[paramName]) return model;
-  const next = {
-    ...comp,
-    params: {
-      ...comp.params,
-      [paramName]: { ...comp.params[paramName], ...patch },
-    },
-  };
-  return updateComponent(model, location, componentId, next);
-}
-
 function nickname(comp: ComponentSpec) {
   return String(comp.metadata?.nickname ?? comp.id);
 }
@@ -228,6 +209,10 @@ export function ParameterTable({
   onModelChange,
   language,
   disabled = false,
+  canRecommend = false,
+  recommendationBusy = false,
+  recommendationMessage = null,
+  onRecommendSetup,
 }: {
   result: FitResult | null;
   model: ModelSpec;
@@ -235,6 +220,10 @@ export function ParameterTable({
   onModelChange: (model: ModelSpec) => void;
   language: Language;
   disabled?: boolean;
+  canRecommend?: boolean;
+  recommendationBusy?: boolean;
+  recommendationMessage?: string | null;
+  onRecommendSetup?: () => void;
 }) {
   void registry;
   const [openKey, setOpenKey] = useState<string | null>(null);
@@ -244,10 +233,28 @@ export function ParameterTable({
 
   return (
     <section className="card parameter-card">
-      <h2>
-        {t(language, "parameters")}{" "}
-        <HelpTip text={parameterText("help", language)} />
-      </h2>
+      <div className="parameter-card-header">
+        <h2>
+          {t(language, "parameters")}{" "}
+          <HelpTip text={parameterText("help", language)} />
+        </h2>
+        {onRecommendSetup ? (
+          <button
+            type="button"
+            className="secondary parameter-recommend-button"
+            disabled={disabled || !canRecommend || recommendationBusy}
+            onClick={onRecommendSetup}
+            title="Estimate conservative initial values and search bounds from the selected trace. User-edited and fitted-as-initial values are preserved."
+          >
+            {recommendationBusy ? "Recommending…" : "Recommend setup"}
+          </button>
+        ) : null}
+      </div>
+      {recommendationMessage ? (
+        <p className="parameter-recommendation-note" role="status">
+          {recommendationMessage}
+        </p>
+      ) : null}
       {sourceRows.length === 0 ? (
         <p className="muted">{t(language, "runFitForParameters")}</p>
       ) : (
@@ -353,12 +360,12 @@ export function ParameterTable({
                                   <DraftNumberInput
                                     disabled={disabled}
                                     value={spec.value}
-                                    title={parameterText("initialTitle", language)}
+                                    title={`${parameterText("initialTitle", language)}\n${initialSourceTitle(model, comp.id, paramName, language)}`}
                                     onCommit={(value) => {
                                       if (value !== null)
                                         onModelChange(
                                           markParameterUserEdited(
-                                            updateParameter(model, location, comp.id, paramName, { value }),
+                                            updateModelParameterSpec(model, location, comp.id, paramName, { value }),
                                             comp.id, paramName, "initial",
                                           ),
                                         );
@@ -380,7 +387,7 @@ export function ParameterTable({
                                     onCommit={(value) =>
                                       onModelChange(
                                         markParameterUserEdited(
-                                          updateParameter(model, location, comp.id, paramName, { lower: value }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { lower: value }),
                                           comp.id, paramName, "bounds",
                                         ),
                                       )
@@ -396,7 +403,7 @@ export function ParameterTable({
                                     onCommit={(value) =>
                                       onModelChange(
                                         markParameterUserEdited(
-                                          updateParameter(model, location, comp.id, paramName, { upper: value }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { upper: value }),
                                           comp.id, paramName, "bounds",
                                         ),
                                       )
@@ -411,7 +418,7 @@ export function ParameterTable({
                                       checked={spec.fit ?? true}
                                       onChange={(e) =>
                                         onModelChange(
-                                          updateParameter(model, location, comp.id, paramName, { fit: e.target.checked }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { fit: e.target.checked }),
                                         )
                                       }
                                     />

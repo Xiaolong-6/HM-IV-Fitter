@@ -127,6 +127,10 @@ export function FittingWorkflowPage({
   updateParameterModel,
   isFitting,
   language,
+  canRecommendSetup,
+  recommendationBusy,
+  recommendationMessage,
+  onRecommendSetup,
 }: {
   selectedTraceId: string | null;
   traces: TraceData[];
@@ -144,6 +148,10 @@ export function FittingWorkflowPage({
   updateParameterModel: (model: ModelSpec) => void;
   isFitting: boolean;
   language: Language;
+  canRecommendSetup: boolean;
+  recommendationBusy: boolean;
+  recommendationMessage: string | null;
+  onRecommendSetup: () => void;
 }) {
   return (
     <section className="workflow-page fitting-page fitting-page-two-column">
@@ -186,6 +194,10 @@ export function FittingWorkflowPage({
               onModelChange={updateParameterModel}
               language={language}
               disabled={isFitting}
+              canRecommend={canRecommendSetup}
+              recommendationBusy={recommendationBusy}
+              recommendationMessage={recommendationMessage}
+              onRecommendSetup={onRecommendSetup}
             />
           </ErrorBoundary>
         </PageSection>
