@@ -1,9 +1,9 @@
-name: Static browser prototype
+name: Static browser CI
 
 on:
   push:
     branches:
-      - "feat/static-browser-standalone"
+      - main
   pull_request:
     paths:
       - "backend/**"
@@ -45,9 +45,7 @@ jobs:
         env:
           PYTHONPATH: backend
         run: |
-          # Main currently contains one stale CSS-ownership test that references
-          # model-builder.css/shell.css files already absent from main.
-          python -m pytest backend/tests -q -k "not test_css_model_builder_owns_styles_without_legacy_shell"
+          python -m pytest backend/tests -q
           python -m compileall -q backend/ivfitter backend/tests
 
       - name: Set up Node
@@ -57,7 +55,6 @@ jobs:
 
       - name: Install Node dependencies
         run: |
-          # Both lockfiles are already stale on main relative to package.json.
           npm install --no-audit --no-fund
           npm install --prefix frontend --no-audit --no-fund
 
@@ -146,9 +143,6 @@ jobs:
       - name: Run focused frontend regression tests
         timeout-minutes: 4
         run: |
-          # The full legacy Vitest suite currently fails to terminate reliably on
-          # main. Keep deterministic pure-model/model-builder coverage here; the
-          # static-browser job separately exercises the built UI in Chromium.
           npm --prefix frontend run test -- \
             src/model/__tests__ \
             src/model-builder/__tests__ \
