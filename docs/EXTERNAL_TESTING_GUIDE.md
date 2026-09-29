@@ -36,5 +36,3 @@ Report:
 - expected vs actual behavior;
 - screenshot for visual issues;
 - whether the issue blocks normal fitting/reporting.
-
-There is no supported Windows portable executable to test; the product surface is the browser application.
