@@ -49,6 +49,12 @@ def test_internal_errors_can_be_verbose_in_debug_mode(monkeypatch):
     assert "debug detail" in response.json()["detail"]
 
 
+def test_retired_server_file_dialog_route_is_absent():
+    client = TestClient(app)
+    assert client.post("/api/v2/open-import-file-dialog").status_code == 404
+    assert client.post("/api/open-import-file-dialog").status_code == 404
+
+
 def test_softplus_extreme_negative_values_do_not_warn():
     values = np.array([-1000.0, -600.0, -500.0, -1.0, 0.0, 1.0])
     with warnings.catch_warnings(record=True) as caught:
