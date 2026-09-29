@@ -2410,3 +2410,30 @@ button.primary { background: var(--theme-accent); border-color: var(--theme-acce
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* Two-column Import visual follow-up after nested-column review. */
+.data-import-sidebar .import-loaded-bar {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  align-items: start;
+  min-height: 0;
+}
+
+.data-import-sidebar .import-sidebar-title {
+  width: 100%;
+  position: static;
+  margin: 0;
+}
+
+.data-review-column > .trace-control-card,
+.data-review-column > .plot-review-card,
+.data-review-column > .spreadsheet-card,
+.data-review-column > .data-review-empty-panel {
+  grid-area: auto !important;
+}
+
+.data-review-column .plot-review-card,
+.data-review-column .spreadsheet-card {
+  align-self: stretch;
+}
