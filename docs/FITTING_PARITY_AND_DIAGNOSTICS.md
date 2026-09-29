@@ -1,45 +1,61 @@
 # Fitting parity and diagnostics
 
-## Current parity target
+## Runtime parity target
 
-The primary numerical parity target is:
+The numerical parity target is:
 
 ```text
 CPython/SciPy core <-> Pyodide/SciPy browser runtime
 ```
 
-FastAPI uses the CPython core and serves as a convenient development/oracle adapter. Browser parity must be measured against the same model/data/config contracts.
+FastAPI uses the CPython core and remains a development/oracle adapter. Browser parity must use the same serialized `FitRequest` contract rather than reimplementing a second model in TypeScript.
 
-## Required parity dimensions
+## Current CI gate
 
-For representative traces compare:
+Static-browser CI now generates the CPython reference at test time and runs the same requests in real Chromium/Pyodide.
 
+The first pinned parity cases are:
+
+1. **Canonical clean diode** — deterministic generated trace with known truth and multiple free parameters.
+2. **Kadowaki et al. 2025 dark reverse-bias segment** — publication-derived measured I-V data, fitted with a deliberately simple one-parameter Ohmic model only as a runtime-consistency case.
+
+The publication case is not evidence that the Ohmic model is the correct full-device physics.
+
+For each parity case CI compares:
+
+- success state;
+- backend-reportable state;
+- warning code/severity set;
+- stable fit diagnostics such as solver mode, weighting, loss, point counts, and free/fixed parameter counts;
 - fitted parameter values;
-- success/failure state;
-- reportability state;
-- warnings;
-- fitted-current curve;
-- residual curve;
-- fit metrics;
-- optimizer diagnostics;
-- bounds-hit / identifiability signals.
+- selected fit metrics;
+- fitted-current curve.
 
-Tolerance must be explicit for each regression case rather than relying on string equality or a single headline metric.
+Parameter/curve comparisons use explicit tolerances stored in the generated oracle. Stable categorical/count diagnostics must match exactly.
 
-## Regression corpus
+## Canonical recovery gates
 
-The corpus should include:
+Canonical synthetic fixtures serve a different purpose from runtime parity: they test recovery against known generation truth.
 
-- ohmic/shunt resistance;
-- diode;
+- **Clean diode:** single-start recovery of `I0`, `n`, and `Rsh`.
+- **Light photodiode:** recovery of `I0`, `n`, `Rsh`, and constant photocurrent using deterministic 12-seed multistart.
+
+The light case intentionally requires multistart because the four free parameters are correlated under the signed-relative residual objective and a single local start can converge to a wrong local minimum. This is an identifiability/optimization boundary, not a browser-runtime discrepancy.
+
+## Expansion plan
+
+The parity/regression corpus should expand to include:
+
 - diode + series resistance;
 - diode + shunt resistance;
 - diode + series + shunt;
-- soft breakdown/current branches;
+- soft-breakdown/current branches;
 - graph-native custom laws;
-- HappyMeasure real IV traces;
-- intentionally poor/non-identifiable fits.
+- representative HappyMeasure real IV traces;
+- deliberately poor/non-identifiable fits.
+
+Each scientific-recovery case needs a defensible truth or expected range. Real-data runtime-parity cases need not assert that the fitted model is the physically unique model.
 
 ## Interpretation policy
 
-Numerical agreement does not prove physical uniqueness. Reports must retain warnings, bounds, residuals, and model context so users can judge whether the selected model is scientifically defensible.
+Numerical agreement between CPython and Pyodide proves runtime consistency within the encoded tolerances. It does not prove model correctness or parameter uniqueness for experimental data.
