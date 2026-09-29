@@ -20,6 +20,7 @@ import {
 } from "../model/diagnostics";
 import {
   boundsSourceTitle,
+  initialSourceTitle,
   markParameterUserEdited,
 } from "../model/boundsSuggestion";
 import { HelpTip } from "./HelpTip";
@@ -334,7 +335,7 @@ export function ParameterTable({
                                   <DraftNumberInput
                                     disabled={disabled}
                                     value={spec.value}
-                                    title={parameterText("initialTitle", language)}
+                                    title={`${parameterText("initialTitle", language)}\n${initialSourceTitle(model, comp.id, paramName, language)}`}
                                     onCommit={(value) => {
                                       if (value !== null)
                                         onModelChange(
