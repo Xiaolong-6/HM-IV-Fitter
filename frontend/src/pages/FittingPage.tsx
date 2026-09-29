@@ -236,6 +236,7 @@ export function FittingPage() {
 
   function updateUserModel(next: ModelSpec) {
     invalidateFitArtifacts();
+    syncStoredCanvasParametersFromModel(next);
     setModel(next);
   }
 
