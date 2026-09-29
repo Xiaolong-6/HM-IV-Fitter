@@ -46,5 +46,3 @@ On Windows, `05_release_build.bat` performs the equivalent release-oriented chec
 Operational browser success does not establish scientific validity for every model.
 
 Before treating a fitting family as scientifically validated, add representative real-data regression cases with expected parameter/metric tolerances and CPython/Pyodide parity checks.
-
-The old desktop/Tkinter parity and Windows portable executable are no longer release criteria.
