@@ -11,7 +11,7 @@ React/Vite UI
     -> Python/SciPy fitting core
 ```
 
-The normal user workflow does not require FastAPI or a desktop executable. FastAPI remains in the repository for development, API testing, and CPython-vs-browser numerical parity work.
+FastAPI remains in the repository only for development, API testing, and CPython-vs-browser numerical parity work.
 
 ## Workflow
 
@@ -20,7 +20,7 @@ The normal user workflow does not require FastAPI or a desktop executable. FastA
 3. **Fit** — set voltage range/advanced controls, run the solver, and inspect curves/residuals/parameters.
 4. **Report** — review warnings, diagnostics, model/equation summary, and export HTML/CSV.
 
-The production shell is English-only. The retired Start/Help pages, language selector, app-specific zoom controls, top-bar version display, and Windows portable wrapper are not supported product surfaces.
+The production shell is English-only and uses the four-step workflow shown above.
 
 ## Browser runtime
 
