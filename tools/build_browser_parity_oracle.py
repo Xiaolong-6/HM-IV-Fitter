@@ -128,6 +128,9 @@ def kadowaki_dark_reverse_trace() -> TraceData:
             "kind": "publication-real-data",
             "doi": "10.1038/s41467-025-65483-8",
             "license": "CC BY-NC-ND 4.0",
+            "y_quantity": "current",
+            "y_unit": "A",
+            "source_columns": ["1.Dark.Voltage_V", "1.Dark.J_A"],
         },
     )
 
