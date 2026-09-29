@@ -97,7 +97,7 @@ _multistart_candidates = multistart_candidates
 
 
 
-def _log_transform_enabled(key: str, name: str, value: float, lower: float, upper: float) -> bool:
+def _log_transform_enabled(key: str, comp, name: str, spec, value: float, lower: float, upper: float) -> bool:
     """Return True for positive scale parameters that should be optimized in log10 space.
 
     SciPy's bounded least_squares makes starts strictly feasible in linear
@@ -120,7 +120,21 @@ def _log_transform_enabled(key: str, name: str, value: float, lower: float, uppe
         "i0", "i01", "i02", "ibr0", "iph", "afwd", "a_rev",
         "_a", "current", "rsh", "rs_ohm", "resistance", "vs", "is",
     )
-    return any(token in lowered for token in scale_tokens)
+    if any(token in lowered for token in scale_tokens):
+        return True
+
+    # Graph-native Model Builder parameters preserve user-facing symbols such
+    # as R/R0 instead of legacy backend keys such as Rs_ohm/Rsh_ohm. Do not
+    # make numerical conditioning depend on that display/serialization name.
+    metadata = getattr(comp, "metadata", None) or {}
+    template_key = str(metadata.get("templateKey", "") or "").strip().lower()
+    behavior = str(metadata.get("behavior", "") or "").strip().lower()
+    unit = str(getattr(spec, "unit", "") or "").strip().lower()
+    if template_key == "resistance" or behavior == "r_of_v":
+        return True
+    if unit in {"ohm", "ω", "ohms"}:
+        return True
+    return False
 
 
 def _build_internal_transform(records, x0: np.ndarray, lower: np.ndarray, upper: np.ndarray):
@@ -129,7 +143,7 @@ def _build_internal_transform(records, x0: np.ndarray, lower: np.ndarray, upper:
     y_lower: list[float] = []
     y_upper: list[float] = []
     for idx, ((key, _comp, name, _spec), value, lo, hi) in enumerate(zip(records, x0, lower, upper)):
-        if _log_transform_enabled(key, name, float(value), float(lo), float(hi)):
+        if _log_transform_enabled(key, _comp, name, _spec, float(value), float(lo), float(hi)):
             transforms.append("log10")
             y0.append(float(np.log10(value)))
             y_lower.append(float(np.log10(lo)))
