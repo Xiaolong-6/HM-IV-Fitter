@@ -19,10 +19,10 @@
   "license_url": "https://creativecommons.org/licenses/by-nc-nd/4.0",
   "publisher": "Springer Science and Business Media LLC",
   "intended_data_type": "JV",
-  "template_format": "wide_multi_trace",
+  "template_format": "paired_voltage_current",
   "trace_count": 2,
   "csv_file": "T_Kadowaki_et_al_2025.csv",
-  "notes": "Header-only CSV template; paste numerical data manually.",
+  "notes": "Numerical source-data CSV for the paper's Fig. 3c I-V characteristics. The source column labels use J_A, but the plotted quantity is device current and the stored unit is A.",
   "citation_required": true,
   "created_by": "prepare_publication_demo_data.py",
   "created_at_utc": "2026-05-26T10:40:29.418401+00:00"
