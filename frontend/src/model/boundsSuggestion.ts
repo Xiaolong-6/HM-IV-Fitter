@@ -1,5 +1,6 @@
 import type { BoundsSuggestionResponse, FunctionDefinition, ModelSpec, ParameterBoundsSuggestion, ParameterSpec } from "./types";
-import { parameterKey, updateModelParameterSpec } from "./parameterGrouping";
+import { graphParameterNameForLegacyParameter, parameterKey, updateModelParameterSpec } from "./parameterGrouping";
+import { DEFAULT_COMPONENT_TEMPLATES } from "../model-builder/preview/canvasState";
 
 type ParameterSource = "registry_default" | "data_suggested" | "user_edited" | "fit_derived_initial";
 
