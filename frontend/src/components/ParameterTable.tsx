@@ -22,7 +22,6 @@ import {
   boundsSourceTitle,
   markParameterUserEdited,
 } from "../model/boundsSuggestion";
-import { updateComponent } from "../model/utils";
 import { HelpTip } from "./HelpTip";
 import { parameterText } from "../content/localizedText";
 import {
@@ -34,6 +33,7 @@ import {
   parameterKey,
   placementGroupTitle,
   setComponentFitState,
+  updateModelParameterSpec,
 } from "../model/parameterGrouping";
 
 function formatParameterNumber(
@@ -140,25 +140,6 @@ function labelForModelParameter(
       ? (neutralBiasLabels[paramName] ?? param?.label ?? paramName)
       : (param?.label ?? paramName);
   return `${nick}.${label}`;
-}
-
-function updateParameter(
-  model: ModelSpec,
-  location: Location,
-  componentId: string,
-  paramName: string,
-  patch: Partial<ParameterSpec>,
-) {
-  const comp = model[location].find((item) => item.id === componentId);
-  if (!comp || !comp.params[paramName]) return model;
-  const next = {
-    ...comp,
-    params: {
-      ...comp.params,
-      [paramName]: { ...comp.params[paramName], ...patch },
-    },
-  };
-  return updateComponent(model, location, componentId, next);
 }
 
 function nickname(comp: ComponentSpec) {
@@ -358,7 +339,7 @@ export function ParameterTable({
                                       if (value !== null)
                                         onModelChange(
                                           markParameterUserEdited(
-                                            updateParameter(model, location, comp.id, paramName, { value }),
+                                            updateModelParameterSpec(model, location, comp.id, paramName, { value }),
                                             comp.id, paramName, "initial",
                                           ),
                                         );
@@ -380,7 +361,7 @@ export function ParameterTable({
                                     onCommit={(value) =>
                                       onModelChange(
                                         markParameterUserEdited(
-                                          updateParameter(model, location, comp.id, paramName, { lower: value }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { lower: value }),
                                           comp.id, paramName, "bounds",
                                         ),
                                       )
@@ -396,7 +377,7 @@ export function ParameterTable({
                                     onCommit={(value) =>
                                       onModelChange(
                                         markParameterUserEdited(
-                                          updateParameter(model, location, comp.id, paramName, { upper: value }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { upper: value }),
                                           comp.id, paramName, "bounds",
                                         ),
                                       )
@@ -411,7 +392,7 @@ export function ParameterTable({
                                       checked={spec.fit ?? true}
                                       onChange={(e) =>
                                         onModelChange(
-                                          updateParameter(model, location, comp.id, paramName, { fit: e.target.checked }),
+                                          updateModelParameterSpec(model, location, comp.id, paramName, { fit: e.target.checked }),
                                         )
                                       }
                                     />
