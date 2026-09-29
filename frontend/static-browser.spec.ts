@@ -471,6 +471,11 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  const reportDiagnostics = page.locator(".report-diagnostic-summary-line");
+  if (await page.getByText("Needs review", { exact: true }).count()) {
+    await expect(reportDiagnostics).toContainText("Validated report:");
+    await expect(reportDiagnostics).toContainText("Review required");
+  }
   await page.screenshot({
     path: "test-results/four-step-report-result.png",
     fullPage: true,
