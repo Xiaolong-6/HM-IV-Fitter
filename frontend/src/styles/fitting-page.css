@@ -2248,3 +2248,34 @@
     min-height: 320px;
   }
 }
+
+
+/* Keep primary Fit actions visible while the expanded Advanced section scrolls. */
+.fit-config-sidebar-content {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+}
+
+.fit-config-sidebar-content .fit-config-advanced-inline {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: calc(3px * var(--app-zoom));
+}
+
+.fit-config-sidebar-actions,
+.fit-config-sidebar-status {
+  background: #fff;
+}
+
+@media (max-width: 980px) {
+  .fit-config-sidebar-content {
+    display: flex;
+    overflow: visible;
+  }
+
+  .fit-config-sidebar-content .fit-config-advanced-inline {
+    overflow: visible;
+  }
+}
