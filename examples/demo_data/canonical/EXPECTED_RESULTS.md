@@ -1,39 +1,51 @@
-# Canonical IVfitter demo set
+# Canonical HM-IV-Fitter regression set
 
-These files are for release-candidate smoke testing, not for publication claims.
+These traces are deterministic scientific regression fixtures. They are not publication claims.
 
 ## 01 — Clean diode
 
 File: `canonical_01_clean_diode.csv`
 
-Recommended path:
-1. Import CSV.
-2. Select the clean diode trace.
-3. Load Model Builder V3 → Single diode preset.
-4. Keep graph_dc selected.
-5. Fit D1.I0, D1.n, Rs.Rs, and Rsh.Rsh.
+Generation truth:
 
-Expected qualitative result: smooth forward exponential, low reverse current, no compliance warning.
+- temperature: 298.15 K
+- diode `I0 = 1e-12 A`
+- ideality factor `n = 1.7`
+- shunt resistance `Rsh = 1e9 ohm`
+- no series resistance term
 
-## 02 — Photodiode / light IV
+The backend regression starts away from the truth and must recover these parameters within the tolerances encoded in `backend/tests/test_canonical_regression.py`.
+
+## 02 — Light photodiode
 
 File: `canonical_02_photodiode_light.csv`
 
-Recommended path:
-1. Import CSV.
-2. Start from Single diode preset.
-3. Add a constant current branch or use the custom I(V) current law with a fixed negative current offset if available.
-4. Fit diode and shunt/series terms.
+Generation truth:
 
-Expected qualitative result: negative current offset around zero bias and diode turn-on under forward bias. A simple diode-only preset should leave structured residuals; that is expected.
+- temperature: 298.15 K
+- diode `I0 = 3e-12 A`
+- ideality factor `n = 1.8`
+- shunt resistance `Rsh = 5e8 ohm`
+- constant photocurrent magnitude `Iph = 2.5e-7 A`
+- photocurrent direction sign: -1
+
+This case checks simultaneous recovery of diode, shunt, and constant-current branch parameters.
+
+The four free parameters are strongly correlated under the signed relative residual objective. A single local start can converge to a numerically valid but wrong parameter set. The canonical recovery gate therefore uses the existing deterministic 12-seed multistart path. This is intentional: the fixture tests whether HM-IV-Fitter can recover the known solution when its anti-local-minimum option is enabled, not whether every single initial guess uniquely identifies all four parameters.
 
 ## 03 — Noisy non-ideal IV
 
 File: `canonical_03_noisy_nonideal.csv`
 
-Recommended path:
-1. Import CSV.
-2. Fit with Single diode preset.
-3. Inspect warnings, residual plot, and report quality metrics.
+This remains a diagnostic/model-mismatch case rather than a pinned parameter-recovery fixture. It is intended to exercise residual inspection, warning/reportability behavior, and compliance-like high-current regions.
 
-Expected qualitative result: fit may converge but should be treated as a diagnostic case; residuals and warnings matter more than a single R² number.
+## Runtime parity
+
+The static-browser CI also builds a CPython reference oracle at test time and compares Pyodide fitting against it.
+
+Current parity cases include:
+
+- the clean canonical diode;
+- a real publication-derived dark reverse-bias segment from Kadowaki et al. (2025), using a deliberately simple one-parameter Ohmic fit.
+
+The publication-data case is a runtime-consistency test, not a claim that an Ohmic model is the correct physical description of the full device.

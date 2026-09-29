@@ -10,6 +10,10 @@ on:
       - "frontend/**"
       - "docs/STATIC_BROWSER_PLAN.md"
       - "docs/STATIC_BROWSER_STABILIZATION.md"
+      - "docs/FITTING_PARITY_AND_DIAGNOSTICS.md"
+      - "examples/demo_data/canonical/**"
+      - "examples/demo_data/publication_data/**"
+      - "tools/build_browser_parity_oracle.py"
       - "package.json"
       - "vite.config.ts"
       - ".github/workflows/static-browser.yml"
@@ -85,6 +89,13 @@ jobs:
               raise SystemExit(f"Static Python manifest missing required files: {missing}")
           print(f"Static Python payload: {len(files)} Python files")
           PY
+
+      - name: Build CPython parity oracle
+        env:
+          PYTHONPATH: backend
+        run: |
+          python tools/build_browser_parity_oracle.py --output frontend/dist/parity-oracle.json
+          test -f frontend/dist/parity-oracle.json
 
       - name: Install Chromium
         working-directory: frontend

@@ -169,6 +169,187 @@ test("static browser runtime imports, fits, and exports without FastAPI", async 
 });
 
 
+test("Pyodide fits match the CPython canonical and publication-data oracle", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto("http://127.0.0.1:4173/");
+
+  const comparisons = await page.evaluate(async () => {
+    type OracleCase = {
+      id: string;
+      request: unknown;
+      reference: {
+        success: boolean;
+        reportable: boolean;
+        parameters: Record<string, number>;
+        metrics: Record<string, number>;
+        current_fit_A: number[];
+        warnings: Array<{ code: string; severity: string }>;
+        diagnostics: {
+          solver_mode: string;
+          residual_weighting: string;
+          loss_function: string;
+          free_parameter_count: number;
+          fixed_parameter_count: number;
+          points_total: number;
+          points_in_selected_range: number;
+          points_used: number;
+          points_excluded: number;
+        };
+      };
+      tolerance: {
+        relative: number;
+        curve_abs_A: number;
+      };
+    };
+
+    const oracleResponse = await fetch("parity-oracle.json", { cache: "no-store" });
+    if (!oracleResponse.ok) throw new Error("Could not load CPython parity oracle.");
+    const oracle = (await oracleResponse.json()) as { cases: OracleCase[] };
+
+    const worker = new Worker(
+      new URL("browser-runtime.worker.js", window.location.href),
+      { type: "module" },
+    );
+    let nextId = 1;
+    const call = <T,>(method: string, payload: unknown): Promise<T> =>
+      new Promise<T>((resolve, reject) => {
+        const id = nextId++;
+        const onMessage = (event: MessageEvent) => {
+          const message = event.data;
+          if (message?.id !== id) return;
+          worker.removeEventListener("message", onMessage);
+          if (message.ok) resolve(message.result as T);
+          else reject(new Error(message.error || "Browser parity fit failed."));
+        };
+        worker.addEventListener("message", onMessage);
+        worker.postMessage({
+          id,
+          method,
+          payload,
+          baseUrl: new URL("./", window.location.href).toString(),
+        });
+      });
+
+    const results = [];
+    for (const item of oracle.cases) {
+      const fit = await call<{
+        success: boolean;
+        reportable: boolean;
+        parameters: Record<string, { value: number }>;
+        metrics: Record<string, number>;
+        curves: { current_fit_A: number[] };
+        warnings: Array<{ code: string; severity: string }>;
+        fit_diagnostics: {
+          solver_mode: string;
+          residual_weighting: string;
+          loss_function: string;
+          free_parameter_count: number;
+          fixed_parameter_count: number;
+          points_total: number;
+          points_in_selected_range: number;
+          points_used: number;
+          points_excluded: number;
+        };
+      }>("fit", item.request);
+
+      results.push({
+        id: item.id,
+        tolerance: item.tolerance,
+        reference: item.reference,
+        browser: {
+          success: fit.success,
+          reportable: fit.reportable,
+          parameters: Object.fromEntries(
+            Object.entries(fit.parameters).map(([key, value]) => [key, value.value]),
+          ),
+          metrics: fit.metrics,
+          current_fit_A: fit.curves.current_fit_A,
+          warnings: [...fit.warnings]
+            .map(({ code, severity }) => ({ code, severity }))
+            .sort((a, b) =>
+              a.code === b.code
+                ? a.severity.localeCompare(b.severity)
+                : a.code.localeCompare(b.code),
+            ),
+          diagnostics: {
+            solver_mode: fit.fit_diagnostics.solver_mode,
+            residual_weighting: fit.fit_diagnostics.residual_weighting,
+            loss_function: fit.fit_diagnostics.loss_function,
+            free_parameter_count: fit.fit_diagnostics.free_parameter_count,
+            fixed_parameter_count: fit.fit_diagnostics.fixed_parameter_count,
+            points_total: fit.fit_diagnostics.points_total,
+            points_in_selected_range: fit.fit_diagnostics.points_in_selected_range,
+            points_used: fit.fit_diagnostics.points_used,
+            points_excluded: fit.fit_diagnostics.points_excluded,
+          },
+        },
+      });
+    }
+    worker.terminate();
+    return results;
+  });
+
+  expect(comparisons.length).toBeGreaterThanOrEqual(2);
+
+  for (const comparison of comparisons) {
+    expect(comparison.browser.success, comparison.id).toBe(comparison.reference.success);
+    expect(comparison.browser.reportable, comparison.id).toBe(comparison.reference.reportable);
+    expect(comparison.browser.warnings, `${comparison.id} warnings`).toEqual(
+      comparison.reference.warnings,
+    );
+    expect(comparison.browser.diagnostics, `${comparison.id} diagnostics`).toEqual(
+      comparison.reference.diagnostics,
+    );
+
+    for (const [key, referenceValue] of Object.entries(comparison.reference.parameters)) {
+      const browserValue = comparison.browser.parameters[key];
+      expect(Number.isFinite(browserValue), `${comparison.id} ${key}`).toBe(true);
+      const allowed = Math.max(
+        Math.abs(referenceValue) * comparison.tolerance.relative,
+        1e-15,
+      );
+      expect(
+        Math.abs(browserValue - referenceValue),
+        `${comparison.id} parameter ${key}`,
+      ).toBeLessThanOrEqual(allowed);
+    }
+
+    for (const [key, referenceValue] of Object.entries(comparison.reference.metrics)) {
+      const browserValue = comparison.browser.metrics[key];
+      if (!Number.isFinite(referenceValue) || !Number.isFinite(browserValue)) continue;
+      const allowed = Math.max(
+        Math.abs(referenceValue) * comparison.tolerance.relative * 5,
+        1e-10,
+      );
+      expect(
+        Math.abs(browserValue - referenceValue),
+        `${comparison.id} metric ${key}`,
+      ).toBeLessThanOrEqual(allowed);
+    }
+
+    expect(comparison.browser.current_fit_A).toHaveLength(
+      comparison.reference.current_fit_A.length,
+    );
+    const maxReference = Math.max(
+      ...comparison.reference.current_fit_A.map((value) => Math.abs(value)),
+      0,
+    );
+    const curveTolerance = Math.max(
+      comparison.tolerance.curve_abs_A,
+      maxReference * comparison.tolerance.relative,
+    );
+    const maxCurveDifference = Math.max(
+      ...comparison.browser.current_fit_A.map((value, index) =>
+        Math.abs(value - comparison.reference.current_fit_A[index]),
+      ),
+      0,
+    );
+    expect(maxCurveDifference, `${comparison.id} fitted curve`).toBeLessThanOrEqual(
+      curveTolerance,
+    );
+  }
+});
+
 test("static UI uses four-step workflow and imports bundled HappyMeasure sample", async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto("http://127.0.0.1:4173/");
