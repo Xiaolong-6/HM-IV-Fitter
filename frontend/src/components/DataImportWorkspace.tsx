@@ -3,7 +3,6 @@ import type { DragEvent as ReactDragEvent } from "react";
 import type { TraceData } from "../model/types";
 import {
   importCsvTextMulti,
-  openImportFileDialog,
   type ImportCsvTextMultiResponse,
 } from "../api/client";
 import type { Language } from "../model/i18n";
@@ -309,28 +308,9 @@ export function DataImportWorkspace({
     return { response, imported: importedResponseToTraces(response) };
   }
 
-  async function openImportPicker() {
+  function openImportPicker() {
     setMessage(null);
-    try {
-      const response = await openImportFileDialog();
-      if (response.canceled) return;
-      const imported = importedResponseToTraces(response);
-      const append = appendNextImportRef.current;
-      appendNextImportRef.current = false;
-      commitImportedTraces(imported, append);
-      setMessage(importMessage(response, imported.length));
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : String(err);
-      if (
-        /Local file dialog is not available|only available from localhost|Failed to fetch|NetworkError|Load failed/i.test(
-          detail,
-        )
-      ) {
-        fileInputRef.current?.click();
-        return;
-      }
-      setMessage(detail);
-    }
+    fileInputRef.current?.click();
   }
 
   async function loadFile(file: File) {

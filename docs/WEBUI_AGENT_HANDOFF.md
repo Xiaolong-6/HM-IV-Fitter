@@ -12,8 +12,6 @@ Import data -> Model builder -> Fit -> Report
 
 The browser runs the Python/SciPy fitting core locally through Pyodide in a Web Worker. FastAPI remains a development/CPython-oracle path.
 
-The retired desktop/PyInstaller portable wrapper is not a supported product path and must not be reintroduced without an explicit product decision.
-
 ## Non-negotiable boundaries
 
 - Preserve fitting physics and numerical contracts unless the task explicitly changes them.

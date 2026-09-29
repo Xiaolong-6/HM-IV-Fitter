@@ -92,27 +92,11 @@ export interface ImportCsvTextMultiResponse {
   warnings?: string[];
 }
 
-export interface OpenImportFileDialogResponse extends ImportCsvTextMultiResponse {
-  canceled: boolean;
-  selected_path?: string | null;
-  selected_name?: string | null;
-  default_dir?: string | null;
-}
-
 export async function importCsvTextMulti(text: string, traceId = "imported_trace"): Promise<ImportCsvTextMultiResponse> {
   if (USE_BROWSER_RUNTIME) {
     return browserCall("import_csv_text_multi", { text, trace_id: traceId });
   }
   return postJson(`${API_PREFIX}/import-csv-text-multi`, { text, trace_id: traceId });
-}
-
-export async function openImportFileDialog(): Promise<OpenImportFileDialogResponse> {
-  if (USE_BROWSER_RUNTIME) {
-    throw new Error(
-      "Local file dialog is not available in static browser mode. Use the browser file picker.",
-    );
-  }
-  return postJson(`${API_PREFIX}/open-import-file-dialog`, {});
 }
 
 export async function generateSyntheticTrace(payload: SyntheticTraceRequest): Promise<SyntheticTraceResponse> {

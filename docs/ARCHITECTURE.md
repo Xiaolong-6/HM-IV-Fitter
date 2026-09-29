@@ -58,7 +58,7 @@ Do not reintroduce the removed `model-builder.css` / `shell.css` ownership split
 
 ## Compatibility
 
-Older saved-model fields may remain readable through compatibility paths. Compatibility readers are not a reason to keep the retired desktop UI or old builder interface.
+Older saved-model fields may remain readable through compatibility paths when real files or regression tests require them.
 
 ## Scientific boundary
 

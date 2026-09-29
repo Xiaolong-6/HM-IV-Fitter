@@ -30,5 +30,3 @@ It runs the frontend/static build, frontend regression tests, backend tests/comp
 ```text
 release/hm-iv-fitter-static-v<version>.zip
 ```
-
-The old Windows/PyInstaller portable executable path has been removed.

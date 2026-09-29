@@ -78,5 +78,3 @@ The root numbered scripts are developer helpers:
 04_run_dev.bat
 05_release_build.bat
 ```
-
-The previous Windows portable/PyInstaller executable workflow has been removed.

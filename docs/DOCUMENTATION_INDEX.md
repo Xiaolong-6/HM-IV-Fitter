@@ -36,4 +36,4 @@
 
 Files under `docs/archive/` and `docs/history/` are historical context only. They are not implementation guidance.
 
-The active documentation must describe the static browser product. Desktop/PyInstaller packaging and the retired six-area Start/Data/Model/Fitting/Report/Help shell are not current product architecture.
+The active documentation describes the static browser product; historical files are retained only for context.

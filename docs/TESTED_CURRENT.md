@@ -43,8 +43,6 @@ The validated static-browser architecture is on `main`.
 
 GitHub Pages is configured to deploy from `main` only after **Static browser CI** succeeds.
 
-The retired Windows/PyInstaller portable wrapper and its packaging code are no longer part of the supported product.
-
 FastAPI remains intentionally for development, API tests, and CPython numerical-oracle comparisons.
 
 ## Scientific boundary

@@ -1,14 +1,10 @@
-"""FastAPI application for the greenfield IV-fitter backend."""
+"""FastAPI development/oracle adapter for HM-IV-Fitter."""
 
 from __future__ import annotations
-import asyncio
+
 import hmac
-import json
 import logging
-import ntpath
 import os
-import subprocess
-import sys
 import threading
 import time
 from contextlib import contextmanager
@@ -29,7 +25,6 @@ from ivfitter.core.bounds_suggestion import BoundsSuggestionRequest, BoundsSugge
 from ivfitter.core.synthetic_trace import SyntheticTraceRequest, SyntheticTraceResult, generate_synthetic_trace
 from ivfitter.core.model_validation import validate_model_spec
 from ivfitter.io.export_report import fit_result_markdown
-from ivfitter.io.default_import_dir import resolve_default_import_dir
 from ivfitter.io.import_trace import ImportCsvTextRequest, import_csv_text, import_csv_text_multi
 from ivfitter.io.export_result import fit_result_json_text, report_csv_text
 
@@ -75,38 +70,12 @@ def _raise_internal_error(exc: Exception, context: str) -> NoReturn:
     raise HTTPException(status_code=500, detail=detail) from exc
 
 
-
-
-def _is_loopback_request(request: Request) -> bool:
-    host = (request.client.host if request.client else "").strip().lower()
-    headers = getattr(request, "headers", {})
-    host_header = headers.get("host", "").split(":", 1)[0].strip().lower()
-    loopback_hosts = {"127.0.0.1", "::1", "::ffff:127.0.0.1", "localhost", "testclient"}
-    return host in loopback_hosts or host_header in loopback_hosts
-
-
-def _require_loopback_for_local_file_dialog(request: Request) -> None:
-    """Keep the server-side file picker unavailable to remote LAN clients.
-
-    The dialog opens on the backend host and reads a selected local file from
-    that same host.  Desktop localhost use remains unchanged, while LAN clients
-    must use paste/upload text endpoints instead of remotely triggering local
-    server file access.
-    """
-    if not _is_loopback_request(request):
-        raise HTTPException(status_code=403, detail="Local file dialog is only available from localhost. Use browser file upload, drag-and-drop, or paste import instead.")
-
-def _public_selected_name(path: str) -> str:
-    # ntpath handles both POSIX and Windows separators on every platform.
-    return ntpath.basename(path)
-
-
 @app.middleware("http")
 async def require_api_token_when_configured(request: Request, call_next):
     """Require a simple API token only when IVFITTER_API_TOKEN is configured.
 
-    The default desktop workflow remains frictionless on localhost. LAN/dev
-    launchers can set IVFITTER_API_TOKEN and the frontend sends the same value
+    Local development remains frictionless by default. LAN/dev launchers can
+    set IVFITTER_API_TOKEN and the frontend sends the same value
     as X-IVFITTER-API-Key. Health/version remain open for diagnostics.
     """
     token = _api_token()
@@ -120,7 +89,6 @@ async def require_api_token_when_configured(request: Request, call_next):
 MAX_IMPORT_TEXT_CHARS = int(os.getenv("IVFITTER_MAX_IMPORT_TEXT_CHARS", "5000000"))
 MAX_FIT_POINTS = int(os.getenv("IVFITTER_MAX_FIT_POINTS", "50000"))
 MAX_CONCURRENT_CPU_REQUESTS = max(1, int(os.getenv("IVFITTER_MAX_CONCURRENT_FITS", "2")))
-FILE_DIALOG_TIMEOUT_S = float(os.getenv("IVFITTER_FILE_DIALOG_TIMEOUT_S", "30"))
 _CPU_SEMAPHORE = threading.BoundedSemaphore(MAX_CONCURRENT_CPU_REQUESTS)
 _RATE_LIMIT_LOCK = threading.Lock()
 _RATE_LIMIT_BUCKETS: dict[str, tuple[float, float]] = {}
@@ -290,16 +258,6 @@ def export_report(result: FitResult) -> ReportResponse:
 class TextResponse(BaseModel):
     text: str
 
-class OpenImportFileDialogResponse(BaseModel):
-    canceled: bool = False
-    traces: list[object] = []
-    selected_path: str | None = None
-    selected_name: str | None = None
-    default_dir: str | None = None
-    summary: str | None = None
-    warnings: list[str] = []
-
-
 def _multi_import_response(items) -> dict:
     traces = [{"trace": trace, "quality": quality} for trace, quality in items]
     seen_warnings: dict[str, None] = {}
@@ -324,6 +282,7 @@ def _handle_endpoint_error(exc: Exception, context: str) -> NoReturn:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     _raise_internal_error(exc, context)
 
+
 @app.post("/api/v2/import-csv-text")
 @app.post("/api/import-csv-text")
 def import_csv_text_endpoint(payload: ImportCsvTextRequest):
@@ -344,61 +303,6 @@ def import_csv_text_multi_endpoint(payload: ImportCsvTextRequest):
         return _multi_import_response(import_csv_text_multi(payload))
     except Exception as exc:
         _handle_endpoint_error(exc, "Import CSV text multi")
-
-def _open_file_dialog_subprocess(default_dir) -> str:
-    """Open tkinter in a child process so the API worker is bounded by a timeout."""
-    script = '\nimport json\nimport sys\ntry:\n    import tkinter as tk\n    from tkinter import filedialog\n    initialdir = sys.argv[1] or None\n    root = tk.Tk()\n    root.withdraw()\n    root.update()\n    try:\n        root.attributes("-topmost", True)\n        root.lift()\n        root.focus_force()\n        root.after(500, lambda: root.attributes("-topmost", False))\n        selected = filedialog.askopenfilename(\n            parent=root,\n            title="Import CSV/TXT",\n            initialdir=initialdir,\n            filetypes=[\n                ("IV trace files", "*.csv *.txt *.dat"),\n                ("CSV files", "*.csv"),\n                ("Text files", "*.txt"),\n                ("DAT files", "*.dat"),\n                ("All files", "*.*"),\n            ],\n        )\n    finally:\n        root.destroy()\n    print(json.dumps({"selected": selected}))\nexcept Exception as exc:\n    print(json.dumps({"error": str(exc)}))\n    raise SystemExit(2)\n'
-    try:
-        completed = subprocess.run(
-            [sys.executable, "-c", script, str(default_dir) if default_dir else ""],
-            capture_output=True,
-            text=True,
-            timeout=FILE_DIALOG_TIMEOUT_S,
-            check=False,
-        )
-    except subprocess.TimeoutExpired as exc:
-        raise HTTPException(status_code=408, detail="Local file dialog timed out. Use drag-and-drop, file upload, or paste import instead.") from exc
-    payload_text = (completed.stdout or "").strip().splitlines()[-1] if (completed.stdout or "").strip() else "{}"
-    try:
-        payload = json.loads(payload_text)
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=501, detail="Local file dialog did not return a valid selection payload.") from exc
-    if completed.returncode != 0 or payload.get("error"):
-        raise HTTPException(status_code=501, detail=f"Local file dialog is not available: {payload.get('error') or completed.stderr.strip()}")
-    return str(payload.get("selected") or "")
-
-
-@app.post("/api/v2/open-import-file-dialog", response_model=OpenImportFileDialogResponse)
-@app.post("/api/open-import-file-dialog", response_model=OpenImportFileDialogResponse)
-async def open_import_file_dialog(request: Request) -> OpenImportFileDialogResponse:
-    """Open a local file picker at the demo IV traces folder when supported."""
-    _require_loopback_for_local_file_dialog(request)
-    default_dir = resolve_default_import_dir()
-    selected = await asyncio.to_thread(_open_file_dialog_subprocess, default_dir)
-
-    if not selected:
-        return OpenImportFileDialogResponse(canceled=True, default_dir=str(default_dir) if default_dir else None)
-
-    path = os.path.abspath(selected)
-    if not path.lower().endswith((".csv", ".txt", ".dat")):
-        raise HTTPException(status_code=422, detail="Selected file must be CSV, TXT, or DAT.")
-    try:
-        with open(path, "r", encoding="utf-8-sig") as handle:
-            text = handle.read()
-        _check_import_size(text)
-        imported = _multi_import_response(import_csv_text_multi(ImportCsvTextRequest(text=text, trace_id=os.path.basename(path))))
-        selected_name = _public_selected_name(path)
-        return OpenImportFileDialogResponse(
-            traces=imported["traces"],
-            selected_path=selected_name,
-            selected_name=selected_name,
-            default_dir=str(default_dir) if default_dir else None,
-            summary=imported.get("summary"),
-            warnings=imported.get("warnings", []),
-        )
-    except Exception as exc:
-        _handle_endpoint_error(exc, "Open import file dialog")
-
 
 @app.post("/api/v2/export-report-csv", response_model=TextResponse)
 @app.post("/api/export-report-csv", response_model=TextResponse)

@@ -49,9 +49,10 @@ def test_internal_errors_can_be_verbose_in_debug_mode(monkeypatch):
     assert "debug detail" in response.json()["detail"]
 
 
-def test_open_import_dialog_public_name_strips_absolute_path():
-    assert main._public_selected_name(r"C:\\Users\\person\\secret\\trace.csv") == "trace.csv"
-    assert main._public_selected_name("/home/person/secret/trace.csv") == "trace.csv"
+def test_retired_server_file_dialog_route_is_absent():
+    client = TestClient(app)
+    assert client.post("/api/v2/open-import-file-dialog").status_code == 404
+    assert client.post("/api/open-import-file-dialog").status_code == 404
 
 
 def test_softplus_extreme_negative_values_do_not_warn():
@@ -63,32 +64,6 @@ def test_softplus_extreme_negative_values_do_not_warn():
     assert out[0] == 0.0
     assert 0.0 < out[1] < 1e-250
     assert np.all(np.isfinite(out))
-
-
-def test_local_file_dialog_rejects_non_loopback_request():
-    class DummyClient:
-        host = "192.168.1.50"
-
-    class DummyRequest:
-        client = DummyClient()
-
-    try:
-        main._require_loopback_for_local_file_dialog(DummyRequest())
-    except Exception as exc:
-        assert getattr(exc, "status_code", None) == 403
-        assert "localhost" in getattr(exc, "detail", "")
-    else:
-        raise AssertionError("remote local-file-dialog request was not rejected")
-
-
-def test_local_file_dialog_allows_loopback_request():
-    class DummyClient:
-        host = "127.0.0.1"
-
-    class DummyRequest:
-        client = DummyClient()
-
-    main._require_loopback_for_local_file_dialog(DummyRequest())
 
 
 def test_cors_methods_are_explicit_not_wildcard(monkeypatch):

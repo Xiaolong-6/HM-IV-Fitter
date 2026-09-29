@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from ivfitter.io.default_import_dir import resolveDefaultImportDir, resolve_default_import_dir
 from ivfitter.io.import_trace import ImportCsvTextRequest, import_csv_text_multi
 
 
@@ -11,22 +10,12 @@ def test_demo_iv_trace_folder_exists():
     assert (folder / "minimal_demo_iv.csv").is_file()
 
 
-def test_resolve_default_import_dir_source_tree():
-    root = Path(__file__).resolve().parents[2]
-    expected = (root / "examples" / "demo_data" / "iv_traces").resolve()
-    assert resolve_default_import_dir(root) == expected
-    assert resolveDefaultImportDir(root) == expected
-
-
-def test_resolve_default_import_dir_missing_folder_falls_back():
-    root = Path(__file__).resolve().parents[2] / "backend"
-    assert resolve_default_import_dir(root) is None
-
-
 def test_demo_iv_trace_uses_existing_parser_pipeline():
     root = Path(__file__).resolve().parents[2]
     demo = root / "examples" / "demo_data" / "iv_traces" / "minimal_demo_iv.csv"
-    traces = import_csv_text_multi(ImportCsvTextRequest(text=demo.read_text(), trace_id=demo.name))
+    traces = import_csv_text_multi(
+        ImportCsvTextRequest(text=demo.read_text(), trace_id=demo.name)
+    )
     assert len(traces) == 1
     trace, quality = traces[0]
     assert len(trace.voltage_V) == len(trace.current_A) == 7

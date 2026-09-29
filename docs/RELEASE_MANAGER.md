@@ -34,5 +34,3 @@ Do not place GitHub write credentials in frontend/runtime code.
 ## Product deployment
 
 GitHub Pages is deployed only after **Static browser CI** succeeds on `main`. The Pages workflow checks out `main`, rebuilds the static site, audits the expected payload files, and deploys `frontend/dist`.
-
-There is no supported desktop/PyInstaller release artifact.
