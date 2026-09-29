@@ -1,33 +1,55 @@
 # Frontend testing
 
-IVfitter uses Vitest for fast frontend unit tests. The first test layer intentionally focuses on pure TypeScript logic before broad DOM integration tests.
+HM-IV-Fitter uses two complementary browser-side test layers.
 
-## Run tests
+## Vitest regression
+
+Run:
 
 ```bash
-cd frontend
-npm install
-npm run test
-npm run build
+npm --prefix frontend run test -- --reporter=dot
 ```
 
-`npm run test:watch` starts Vitest in watch mode for local UI/model iteration.
+Coverage focuses on:
 
-## Current coverage focus
+- parameter/metric formatting;
+- fit lifecycle and stale-result rules;
+- report/export helpers;
+- Model Builder graph/domain behavior;
+- browser-runtime worker lifecycle;
+- API/browser adapter behavior;
+- representative component behavior.
 
-The v1.5.16 frontend test foundation covers:
+Prefer small deterministic tests over whole-app snapshots.
 
-- parameter and metric formatting helpers,
-- compact parameter status classification,
-- fit diagnostics/verdict helpers,
-- data-driven bounds suggestion application and source metadata,
-- Model Builder bucket/filter/duplicate rules,
-- representative i18n key availability.
+## Static build
 
-The v1.5.19 workflow shell also has source-level regression checks for the new Start here / Data / Model / Fitting / Report / Help navigation and page structure. When adding or moving major page content, update those checks and add focused Vitest coverage once local frontend dependencies are available.
+```bash
+npm run build:static
+```
 
-## Test policy
+The output must include:
 
-Prefer small, deterministic unit tests for model logic and UI state helpers. Add component smoke tests only when the component has stable props and behavior. Avoid large snapshots of the whole app because the fitting workspace changes frequently and broad snapshots tend to hide meaningful regressions.
+- `frontend/dist/index.html`
+- `frontend/dist/browser-runtime.worker.js`
+- `frontend/dist/static-python/manifest.json`
+- `frontend/dist/static-python/ivfitter/browser_bridge.py`
 
-When adding new model-builder rules, report/export formatting, diagnostic status text, or translation keys, add or update a focused Vitest test in the same area.
+## Real-browser smoke
+
+Playwright exercises the built static site in Chromium with Pyodide.
+
+Current smoke coverage includes:
+
+- four-step navigation;
+- generic CSV import;
+- bundled HappyMeasure sample import;
+- invalid-model validation;
+- successful and failed fits;
+- cancellation/rerun;
+- trace/model changes invalidating stale reports;
+- HTML/CSV exports;
+- 420 px narrow viewport;
+- runtime bootstrap failure/retry.
+
+A successful Vite build alone is not sufficient to claim the browser product works.
