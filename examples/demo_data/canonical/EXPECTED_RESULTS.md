@@ -31,6 +31,8 @@ Generation truth:
 
 This case checks simultaneous recovery of diode, shunt, and constant-current branch parameters.
 
+The four free parameters are strongly correlated under the signed relative residual objective. A single local start can converge to a numerically valid but wrong parameter set. The canonical recovery gate therefore uses the existing deterministic 12-seed multistart path. This is intentional: the fixture tests whether HM-IV-Fitter can recover the known solution when its anti-local-minimum option is enabled, not whether every single initial guess uniquely identifies all four parameters.
+
 ## 03 — Noisy non-ideal IV
 
 File: `canonical_03_noisy_nonideal.csv`
