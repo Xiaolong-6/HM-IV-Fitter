@@ -471,6 +471,10 @@ test("successful synthetic fit exports reports and model changes invalidate it",
   await workflow.getByRole("button", { name: "4 Report" }).click();
   await expect(page.getByText("No completed fit yet.")).toHaveCount(0);
   await expect(page.locator(".scientific-report-page")).toBeVisible();
+  await expect(page.getByText("Backend reportable", { exact: true })).toBeVisible();
+  await expect(page.getByText("Usable as validated report", { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/`gtol`/)).toHaveCount(0);
+  await expect(page.getByText(/gtol termination condition is satisfied\./)).toBeVisible();
   await page.screenshot({
     path: "test-results/four-step-report-result.png",
     fullPage: true,
