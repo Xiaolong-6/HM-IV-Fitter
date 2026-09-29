@@ -195,7 +195,7 @@ def test_graph_dc_recovers_series_resistance_through_internal_node() -> None:
             reference_node="GND",
             nodes=[
                 GraphNode(id="V", role="terminal"),
-                GraphNode(id="N1", role="junction"),
+                GraphNode(id="N1", role="internal"),
                 GraphNode(id="GND", role="reference"),
             ],
             components=[
