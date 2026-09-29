@@ -598,14 +598,17 @@ def fit_trace(request: FitRequest) -> FitResult:
     range_indices = np.where(range_mask)[0]
     assert len(excluded) == len(range_indices), "compliance mask must align with selected range"
     excluded_mask[range_indices[excluded]] = True
-    metrics = fit_metrics(i_pred, i_all, request.config.residual_floor_A)
-    finite_residual = residual[np.isfinite(residual)]
+
+    selected_pred = i_pred[range_indices][use] if len(range_indices) else np.asarray([], dtype=float)
+    selected_meas = i_meas[use] if len(i_meas) else np.asarray([], dtype=float)
+    metrics = fit_metrics(selected_pred, selected_meas, request.config.residual_floor_A)
+    selected_residual = selected_pred - selected_meas if len(selected_pred) == len(selected_meas) else np.asarray([], dtype=float)
+    finite_residual = selected_residual[np.isfinite(selected_residual)]
     metrics["mae_A"] = float(np.mean(np.abs(finite_residual))) if finite_residual.size else float("nan")
     metrics["max_abs_residual_A"] = float(np.max(np.abs(finite_residual))) if finite_residual.size else float("nan")
 
-    selected_pred = i_pred[range_indices][use] if len(range_indices) else np.asarray([], dtype=float)
-    if len(selected_pred) and len(i_meas[use]) == len(selected_pred) and np.all(np.isfinite(selected_pred)):
-        final_weighted_residual = weighted_residual(selected_pred, i_meas[use], request.config.weighting, request.config.residual_floor_A)
+    if len(selected_pred) and len(selected_meas) == len(selected_pred) and np.all(np.isfinite(selected_pred)):
+        final_weighted_residual = weighted_residual(selected_pred, selected_meas, request.config.weighting, request.config.residual_floor_A)
         final_weighted_residual = np.nan_to_num(final_weighted_residual, nan=np.nan, posinf=np.nan, neginf=np.nan)
         finite_weighted = final_weighted_residual[np.isfinite(final_weighted_residual)]
     else:
